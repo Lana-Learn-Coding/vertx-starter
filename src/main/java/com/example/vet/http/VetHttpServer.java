@@ -66,6 +66,7 @@ public class VetHttpServer extends AbstractVerticle {
 
     private void createUser(RoutingContext context) {
         final JsonObject user = context.getBodyAsJson();
+
         // ignore the _id field
         user.remove("_id");
         hashPasswordThenSaveUserThenResponse(context, user);
