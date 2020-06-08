@@ -44,11 +44,7 @@ public class VetHttpServer extends AbstractVerticle {
                 context.fail(result.cause());
                 return;
             }
-
-            context.response()
-                    .setStatusCode(200)
-                    .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                    .end(result.result().encode());
+            responseOk(context, result.result().encode());
         });
     }
 
@@ -61,14 +57,10 @@ public class VetHttpServer extends AbstractVerticle {
 
             JsonObject user = result.result();
             if (user == null) {
-                context.response().setStatusCode(404).end();
+                responseNotFound(context);
                 return;
             }
-
-            context.response()
-                    .setStatusCode(200)
-                    .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                    .end(user.encode());
+            responseOk(context, user.encode());
         });
     }
 
@@ -92,7 +84,7 @@ public class VetHttpServer extends AbstractVerticle {
             if (userExisted) {
                 hashPasswordThenSaveUserThenResponse(context, user);
             } else {
-                context.response().setStatusCode(404);
+                responseNotFound(context);
             }
         });
     }
@@ -119,10 +111,7 @@ public class VetHttpServer extends AbstractVerticle {
                 context.fail(result.cause());
                 return;
             }
-            context.response()
-                    .setStatusCode(200)
-                    .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                    .end(result.result().encode());
+            responseOk(context, user.encode());
         });
     }
 
@@ -134,5 +123,16 @@ public class VetHttpServer extends AbstractVerticle {
             }
             context.response().setStatusCode(204).end();
         });
+    }
+
+    private void responseOk(RoutingContext context, String data) {
+        context.response()
+                .setStatusCode(200)
+                .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .end(data);
+    }
+
+    private void responseNotFound(RoutingContext context) {
+        context.response().setStatusCode(404).end();
     }
 }
