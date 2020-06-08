@@ -2,7 +2,7 @@ package com.example.vet;
 
 import com.example.vet.database.VetDatabase;
 import com.example.vet.http.VetHttpServer;
-import com.example.vet.http.VetWorker;
+import com.example.vet.http.VetPasswordEncoder;
 import io.vertx.core.*;
 
 public class VetMain extends AbstractVerticle {
@@ -13,7 +13,7 @@ public class VetMain extends AbstractVerticle {
     @Override
     public void start(Promise<Void> promise) {
         deployDatabase().compose(dbId ->
-                deployHttpServer().compose(severId -> deployWorker())
+                deployWorker().compose(severId -> deployHttpServer())
         )
                 .onComplete(ar -> promise.complete())
                 .onFailure(ar -> promise.fail(ar.getCause()));
@@ -37,7 +37,7 @@ public class VetMain extends AbstractVerticle {
         DeploymentOptions options = new DeploymentOptions()
                 .setWorker(true)
                 .setInstances(2);
-        vertx.deployVerticle(VetWorker.class, options, deployment);
+        vertx.deployVerticle(VetPasswordEncoder.class, options, deployment);
         return deployment.future();
     }
 }

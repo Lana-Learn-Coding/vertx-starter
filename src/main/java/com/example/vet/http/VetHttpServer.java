@@ -11,7 +11,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 
 public class VetHttpServer extends AbstractVerticle {
     private final String VET_DB_QUEUE = "dbclient.queue";
-    private final String WORKER_QUEUE = "worker.queue";
+    private final String PASSWORD_ENCODER_QUEUE = "encoder.worker.queue";
     private VetDatabaseService dbService;
 
     @Override
@@ -26,10 +26,6 @@ public class VetHttpServer extends AbstractVerticle {
         router.get("/users/:id").handler(this::fetchUser);
         router.put("/users/:id").handler(this::updateUser);
         router.delete("/users/:id").handler(this::deleteUser);
-
-        // worker and blocking test
-        router.get("/action/block").handler(this::doBlockingStuff);
-        router.get("/action/block/worker").handler(this::doBlockingStuffWithWorker);
 
         // Print error stack trace to console
         router.errorHandler(500, rc -> {
@@ -79,7 +75,7 @@ public class VetHttpServer extends AbstractVerticle {
         // ignore the _id field
         user.remove("_id");
 
-        saveUserThenResponse(context, user);
+        hashPasswordThenSaveThenResponse(context, user);
     }
 
     private void updateUser(RoutingContext context) {
@@ -91,12 +87,28 @@ public class VetHttpServer extends AbstractVerticle {
             } else {
                 boolean userExisted = lookup.result();
                 if (userExisted) {
-                    saveUserThenResponse(context, user);
+                    hashPasswordThenSaveThenResponse(context, user);
                 } else {
                     context.response().setStatusCode(404);
                 }
             }
         });
+    }
+
+    private void hashPasswordThenSaveThenResponse(RoutingContext context, JsonObject user) {
+        if (user.containsKey("password")) {
+            DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
+            vertx.eventBus().request(PASSWORD_ENCODER_QUEUE, user.getString("password"), options, reply -> {
+                if (reply.failed()) {
+                    context.fail(reply.cause());
+                } else {
+                    user.put("password", reply.result().body());
+                    saveUserThenResponse(context, user);
+                }
+            });
+        } else {
+            saveUserThenResponse(context, user);
+        }
     }
 
     private void saveUserThenResponse(RoutingContext context, JsonObject user) {
@@ -120,33 +132,5 @@ public class VetHttpServer extends AbstractVerticle {
                 context.response().setStatusCode(204).end();
             }
         });
-    }
-
-    private void doBlockingStuffWithWorker(RoutingContext context) {
-        DeliveryOptions options = new DeliveryOptions().addHeader("action", "run-blocking-work");
-        vertx.eventBus().<String>request(WORKER_QUEUE, "run-blocking-work", options, reply -> {
-            if (reply.failed()) {
-                context.fail(reply.cause());
-            } else {
-                context.response()
-                        .setStatusCode(200)
-                        .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
-                        .end(reply.result().body());
-            }
-        });
-    }
-
-    private void doBlockingStuff(RoutingContext context) {
-        try {
-            // Simulate blocking
-            Thread.sleep(10000);
-        } catch (InterruptedException e) {
-            // Interrupted, Ignore
-        }
-        context
-                .response()
-                .setStatusCode(200)
-                .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
-                .end("Your heavy blocking work is done");
     }
 }
