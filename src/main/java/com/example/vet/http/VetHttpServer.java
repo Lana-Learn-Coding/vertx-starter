@@ -1,5 +1,6 @@
 package com.example.vet.http;
 
+import com.example.vet.QueueAddresses;
 import com.example.vet.database.VetDatabaseService;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -10,13 +11,11 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
 public class VetHttpServer extends AbstractVerticle {
-    private final String VET_DB_QUEUE = "dbclient.queue";
-    private final String PASSWORD_ENCODER_QUEUE = "encoder.worker.queue";
     private VetDatabaseService dbService;
 
     @Override
     public void start() {
-        dbService = VetDatabaseService.createProxy(vertx, VET_DB_QUEUE);
+        dbService = VetDatabaseService.createProxy(vertx, QueueAddresses.VET_DB_QUEUE.address);
         final Router router = Router.router(vertx);
         // Enable the body parser to we can get the form data and json documents in out context.
         router.route().handler(BodyHandler.create());
@@ -77,7 +76,7 @@ public class VetHttpServer extends AbstractVerticle {
         final JsonObject user = context.getBodyAsJson();
         // ignore the _id field
         user.remove("_id");
-        hashPasswordThenSaveThenResponse(context, user);
+        hashPasswordThenSaveUserThenResponse(context, user);
     }
 
     private void updateUser(RoutingContext context) {
@@ -91,20 +90,20 @@ public class VetHttpServer extends AbstractVerticle {
 
             boolean userExisted = lookup.result();
             if (userExisted) {
-                hashPasswordThenSaveThenResponse(context, user);
+                hashPasswordThenSaveUserThenResponse(context, user);
             } else {
                 context.response().setStatusCode(404);
             }
         });
     }
 
-    private void hashPasswordThenSaveThenResponse(RoutingContext context, JsonObject user) {
+    private void hashPasswordThenSaveUserThenResponse(RoutingContext context, JsonObject user) {
         if (!user.containsKey("password")) {
             saveUserThenResponse(context, user);
             return;
         }
         DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
-        vertx.eventBus().request(PASSWORD_ENCODER_QUEUE, user.getString("password"), options, reply -> {
+        vertx.eventBus().request(QueueAddresses.PASSWORD_ENCODER_QUEUE.address, user.getString("password"), options, reply -> {
             if (reply.failed()) {
                 context.fail(reply.cause());
                 return;

@@ -1,11 +1,10 @@
 package com.example.vet.http;
 
+import com.example.vet.QueueAddresses;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.Message;
 
 public class VetPasswordEncoder extends AbstractVerticle {
-    private final String PASSWORD_ENCODER_QUEUE = "encoder.worker.queue";
-
     private enum ErrorCodes {
         NO_ACTION_SPECIFIED,
         BAD_ACTION,
@@ -13,7 +12,7 @@ public class VetPasswordEncoder extends AbstractVerticle {
 
     @Override
     public void start() {
-        vertx.eventBus().consumer(PASSWORD_ENCODER_QUEUE, this::onMessage);
+        vertx.eventBus().consumer(QueueAddresses.PASSWORD_ENCODER_QUEUE.address, this::onMessage);
     }
 
     private void onMessage(Message<String> message) {
