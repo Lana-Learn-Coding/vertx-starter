@@ -22,11 +22,11 @@ public class VetDatabaseServiceImpl implements VetDatabaseService {
         mongo.find(USER_COLLECTION, query, lookup -> {
             if (lookup.failed()) {
                 resultHandler.handle(Future.failedFuture(lookup.cause()));
-            } else {
-                JsonArray listUser = new JsonArray();
-                lookup.result().forEach(listUser::add);
-                resultHandler.handle(Future.succeededFuture(listUser));
+                return;
             }
+            JsonArray listUser = new JsonArray();
+            lookup.result().forEach(listUser::add);
+            resultHandler.handle(Future.succeededFuture(listUser));
         });
         return this;
     }
@@ -43,7 +43,6 @@ public class VetDatabaseServiceImpl implements VetDatabaseService {
             if (lookup.failed()) {
                 resultHandler.handle(Future.failedFuture(lookup.cause()));
             } else {
-                // fetch the saved user
                 fetchUser(new JsonObject().put("_id", lookup.result()), new JsonObject(), resultHandler);
             }
         });
@@ -55,9 +54,9 @@ public class VetDatabaseServiceImpl implements VetDatabaseService {
         mongo.findOneAndDelete(USER_COLLECTION, query, lookup -> {
             if (lookup.failed()) {
                 resultHandler.handle(Future.failedFuture(lookup.cause()));
-            } else {
-                resultHandler.handle(Future.succeededFuture());
+                return;
             }
+            resultHandler.handle(Future.succeededFuture());
         });
         return this;
     }
@@ -67,10 +66,10 @@ public class VetDatabaseServiceImpl implements VetDatabaseService {
         mongo.findOne(USER_COLLECTION, query, new JsonObject().put("_id", 1), lookup -> {
             if (lookup.failed()) {
                 resultHandler.handle(Future.failedFuture(lookup.cause()));
-            } else {
-                boolean isExisted = lookup.result() != null;
-                resultHandler.handle(Future.succeededFuture(isExisted));
+                return;
             }
+            boolean isExisted = lookup.result() != null;
+            resultHandler.handle(Future.succeededFuture(isExisted));
         });
         return this;
     }

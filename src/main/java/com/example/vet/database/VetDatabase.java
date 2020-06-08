@@ -15,11 +15,11 @@ public class VetDatabase extends AbstractVerticle {
         VetDatabaseService.create(mongo, ready -> {
             if (ready.failed()) {
                 startPromise.fail(ready.cause());
-            } else {
-                ServiceBinder binder = new ServiceBinder(vertx);
-                binder.setAddress(VET_DB_QUEUE).register(VetDatabaseService.class, ready.result());
-                startPromise.complete();
+                return;
             }
+            ServiceBinder binder = new ServiceBinder(vertx);
+            binder.setAddress(VET_DB_QUEUE).register(VetDatabaseService.class, ready.result());
+            startPromise.complete();
         });
     }
 }

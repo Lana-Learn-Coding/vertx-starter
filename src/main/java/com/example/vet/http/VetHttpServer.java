@@ -43,12 +43,13 @@ public class VetHttpServer extends AbstractVerticle {
         dbService.fetchAllUser(new JsonObject(), result -> {
             if (result.failed()) {
                 context.fail(result.cause());
-            } else {
-                context.response()
-                        .setStatusCode(200)
-                        .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                        .end(result.result().encode());
+                return;
             }
+
+            context.response()
+                    .setStatusCode(200)
+                    .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                    .end(result.result().encode());
         });
     }
 
@@ -56,17 +57,19 @@ public class VetHttpServer extends AbstractVerticle {
         dbService.fetchUser(new JsonObject().put("_id", context.request().getParam("id")), new JsonObject(), result -> {
             if (result.failed()) {
                 context.fail(result.cause());
-            } else {
-                JsonObject user = result.result();
-                if (user == null) {
-                    context.response().setStatusCode(404).end();
-                } else {
-                    context.response()
-                            .setStatusCode(200)
-                            .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                            .end(user.encode());
-                }
+                return;
             }
+
+            JsonObject user = result.result();
+            if (user == null) {
+                context.response().setStatusCode(404).end();
+                return;
+            }
+
+            context.response()
+                    .setStatusCode(200)
+                    .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                    .end(user.encode());
         });
     }
 
@@ -74,7 +77,6 @@ public class VetHttpServer extends AbstractVerticle {
         final JsonObject user = context.getBodyAsJson();
         // ignore the _id field
         user.remove("_id");
-
         hashPasswordThenSaveThenResponse(context, user);
     }
 
@@ -84,43 +86,44 @@ public class VetHttpServer extends AbstractVerticle {
         dbService.isUserExist(new JsonObject().put("_id", id), lookup -> {
             if (lookup.failed()) {
                 context.fail(lookup.cause());
+                return;
+            }
+
+            boolean userExisted = lookup.result();
+            if (userExisted) {
+                hashPasswordThenSaveThenResponse(context, user);
             } else {
-                boolean userExisted = lookup.result();
-                if (userExisted) {
-                    hashPasswordThenSaveThenResponse(context, user);
-                } else {
-                    context.response().setStatusCode(404);
-                }
+                context.response().setStatusCode(404);
             }
         });
     }
 
     private void hashPasswordThenSaveThenResponse(RoutingContext context, JsonObject user) {
-        if (user.containsKey("password")) {
-            DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
-            vertx.eventBus().request(PASSWORD_ENCODER_QUEUE, user.getString("password"), options, reply -> {
-                if (reply.failed()) {
-                    context.fail(reply.cause());
-                } else {
-                    user.put("password", reply.result().body());
-                    saveUserThenResponse(context, user);
-                }
-            });
-        } else {
+        if (!user.containsKey("password")) {
             saveUserThenResponse(context, user);
+            return;
         }
+        DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
+        vertx.eventBus().request(PASSWORD_ENCODER_QUEUE, user.getString("password"), options, reply -> {
+            if (reply.failed()) {
+                context.fail(reply.cause());
+                return;
+            }
+            user.put("password", reply.result().body());
+            saveUserThenResponse(context, user);
+        });
     }
 
     private void saveUserThenResponse(RoutingContext context, JsonObject user) {
         dbService.save(user, result -> {
             if (result.failed()) {
                 context.fail(result.cause());
-            } else {
-                context.response()
-                        .setStatusCode(200)
-                        .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                        .end(result.result().encode());
+                return;
             }
+            context.response()
+                    .setStatusCode(200)
+                    .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                    .end(result.result().encode());
         });
     }
 
@@ -128,9 +131,9 @@ public class VetHttpServer extends AbstractVerticle {
         dbService.deleteUser(new JsonObject().put("_id", context.request().getParam("id")), result -> {
             if (result.failed()) {
                 context.fail(result.cause());
-            } else {
-                context.response().setStatusCode(204).end();
+                return;
             }
+            context.response().setStatusCode(204).end();
         });
     }
 }

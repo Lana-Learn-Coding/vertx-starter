@@ -19,19 +19,20 @@ public class VetPasswordEncoder extends AbstractVerticle {
     private void onMessage(Message<String> message) {
         if (!message.headers().contains("action")) {
             message.fail(ErrorCodes.NO_ACTION_SPECIFIED.ordinal(), "No action specified");
+            return;
+        }
+
+        String action = message.headers().get("action");
+        if (action.equals("encode")) {
+            encode(message);
         } else {
-            String action = message.headers().get("action");
-            if (!action.equals("encode")) {
-                message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Bad action: " + action);
-            } else {
-                encode(message);
-            }
+            message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Bad action: " + action);
         }
     }
 
     private void encode(Message<String> message) {
         try {
-            // Encoding....
+            // Encoding...
             Thread.sleep(1000);
         } catch (InterruptedException e) {
             // Ignore
