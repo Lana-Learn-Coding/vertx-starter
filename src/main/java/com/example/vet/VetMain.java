@@ -2,10 +2,8 @@ package com.example.vet;
 
 import com.example.vet.database.VetDatabase;
 import com.example.vet.http.VetHttpServer;
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Launcher;
-import io.vertx.core.Promise;
+import com.example.vet.http.VetWorker;
+import io.vertx.core.*;
 
 public class VetMain extends AbstractVerticle {
     public static void main(String[] args) {
@@ -14,17 +12,32 @@ public class VetMain extends AbstractVerticle {
 
     @Override
     public void start(Promise<Void> promise) {
-        Promise<String> vetDBDeployment = Promise.promise();
-        vertx.deployVerticle(new VetDatabase(), vetDBDeployment);
-
-        vetDBDeployment.future().compose(id -> {
-            Promise<String> vetHttpDeployment = Promise.promise();
-            // Don't use new (pass instance) if you want to specify the number of instances
-            // Because Vertx can't magically turn one instance of a Java object into N instances
-            vertx.deployVerticle(VetHttpServer.class, new DeploymentOptions().setInstances(2), vetHttpDeployment);
-            return vetHttpDeployment.future();
-        })
+        deployDatabase().compose(dbId ->
+                deployHttpServer().compose(severId -> deployWorker())
+        )
                 .onComplete(ar -> promise.complete())
                 .onFailure(ar -> promise.fail(ar.getCause()));
+    }
+
+    private Future<String> deployDatabase() {
+        Promise<String> deployment = Promise.promise();
+        vertx.deployVerticle(new VetDatabase(), deployment);
+        return deployment.future();
+    }
+
+    private Future<String> deployHttpServer() {
+        Promise<String> deployment = Promise.promise();
+        DeploymentOptions options = new DeploymentOptions().setInstances(1);
+        vertx.deployVerticle(VetHttpServer.class, options, deployment);
+        return deployment.future();
+    }
+
+    private Future<String> deployWorker() {
+        Promise<String> deployment = Promise.promise();
+        DeploymentOptions options = new DeploymentOptions()
+                .setWorker(true)
+                .setInstances(2);
+        vertx.deployVerticle(VetWorker.class, options, deployment);
+        return deployment.future();
     }
 }
