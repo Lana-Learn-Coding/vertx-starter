@@ -14,6 +14,11 @@ dependencies {
     compile group: 'io.vertx', name: 'vertx-web', version: '3.9.1'
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
     compile group: 'io.vertx', name: 'vertx-mongo-client', version: '3.9.1'
+    compile group: 'io.vertx', name: 'vertx-service-proxy', version: '3.9.1'
+    compileOnly group: 'io.vertx', name: 'vertx-codegen', version: '3.9.1'
+
+    annotationProcessor group: 'io.vertx', name: 'vertx-service-proxy', version: '3.9.1', classifier:'processor'
+    annotationProcessor group: 'io.vertx', name: 'vertx-codegen', version: '3.9.1', classifier:'processor'
 
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }
