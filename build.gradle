@@ -1,26 +1,32 @@
 plugins {
-    id 'java'
+    id "java"
+    id "idea"
 }
 
-group 'org.example'
-version '1.0-SNAPSHOT'
+ext {
+    vertxVersion = "3.9.1"
+}
+
+group "org.example"
+version "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile group: 'io.vertx', name: 'vertx-core', version: '3.9.1'
-    compile group: 'io.vertx', name: 'vertx-web', version: '3.9.1'
-    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
-    compile group: 'io.vertx', name: 'vertx-mongo-client', version: '3.9.1'
-    compile group: 'io.vertx', name: 'vertx-service-proxy', version: '3.9.1'
-    compileOnly group: 'io.vertx', name: 'vertx-codegen', version: '3.9.1'
-    compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.12'
+    compile "io.vertx:vertx-core:${vertxVersion}"
+    compile "io.vertx:vertx-web:${vertxVersion}"
+    compile "io.vertx:vertx-mongo-client:${vertxVersion}"
+    compile "io.vertx:vertx-rx-java2:${vertxVersion}"
 
-    annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.12'
-    annotationProcessor group: 'io.vertx', name: 'vertx-service-proxy', version: '3.9.1', classifier:'processor'
-    annotationProcessor group: 'io.vertx', name: 'vertx-codegen', version: '3.9.1', classifier:'processor'
+    compile "io.vertx:vertx-service-proxy:${vertxVersion}"
+    compileOnly "io.vertx:vertx-codegen:${vertxVersion}"
+    annotationProcessor "io.vertx:vertx-service-proxy:${vertxVersion}:processor"
+    annotationProcessor "io.vertx:vertx-codegen:${vertxVersion}:processor"
 
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compileOnly "org.projectlombok:lombok:1.18.12"
+    annotationProcessor "org.projectlombok:lombok:1.18.12"
+
+    testCompile "junit:junit:4.12"
 }
