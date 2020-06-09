@@ -5,7 +5,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.MongoClient;
+import io.vertx.reactivex.ext.mongo.MongoClient;
 
 
 public class VetDatabaseServiceImpl implements VetDatabaseService {
@@ -19,58 +19,66 @@ public class VetDatabaseServiceImpl implements VetDatabaseService {
 
     @Override
     public VetDatabaseService fetchAllUser(JsonObject query, Handler<AsyncResult<JsonArray>> resultHandler) {
-        mongo.find(USER_COLLECTION, query, lookup -> {
-            if (lookup.failed()) {
-                resultHandler.handle(Future.failedFuture(lookup.cause()));
-                return;
-            }
-            JsonArray listUser = new JsonArray();
-            lookup.result().forEach(listUser::add);
-            resultHandler.handle(Future.succeededFuture(listUser));
-        });
+        mongo
+            .rxFind(USER_COLLECTION, query)
+            .map(listUser -> {
+                JsonArray jsonArrayUser = new JsonArray();
+                listUser.forEach(jsonArrayUser::add);
+                return jsonArrayUser;
+            })
+            .subscribe(
+                listUser -> resultHandler.handle(Future.succeededFuture(listUser)),
+                error -> resultHandler.handle(Future.failedFuture(error))
+            );
         return this;
     }
 
     @Override
     public VetDatabaseService fetchUser(JsonObject query, JsonObject fields, Handler<AsyncResult<JsonObject>> resultHandler) {
-        mongo.findOne(USER_COLLECTION, query, fields, resultHandler);
+        mongo
+            .rxFindOne(USER_COLLECTION, query, fields)
+            .subscribe(
+                user -> resultHandler.handle(Future.succeededFuture(user)),
+                error -> resultHandler.handle(Future.failedFuture(error)),
+                () -> resultHandler.handle(Future.succeededFuture(null))
+            );
         return this;
     }
 
     @Override
     public VetDatabaseService save(JsonObject user, Handler<AsyncResult<JsonObject>> resultHandler) {
-        mongo.save(USER_COLLECTION, user, lookup -> {
-            if (lookup.failed()) {
-                resultHandler.handle(Future.failedFuture(lookup.cause()));
-            } else {
-                fetchUser(new JsonObject().put("_id", lookup.result()), new JsonObject(), resultHandler);
-            }
-        });
+        mongo
+            .rxSave(USER_COLLECTION, user)
+            .flatMap(id -> mongo.rxFindOne(USER_COLLECTION, new JsonObject().put("_id", id), new JsonObject()))
+            .subscribe(
+                saved -> resultHandler.handle(Future.succeededFuture(saved)),
+                error -> resultHandler.handle(Future.failedFuture(error))
+            );
+        ;
         return this;
     }
 
     @Override
     public VetDatabaseService deleteUser(JsonObject query, Handler<AsyncResult<Void>> resultHandler) {
-        mongo.findOneAndDelete(USER_COLLECTION, query, lookup -> {
-            if (lookup.failed()) {
-                resultHandler.handle(Future.failedFuture(lookup.cause()));
-                return;
-            }
-            resultHandler.handle(Future.succeededFuture());
-        });
+        mongo
+            .rxFindOneAndDelete(USER_COLLECTION, query)
+            .subscribe(
+                deleted -> resultHandler.handle(Future.succeededFuture()),
+                error -> resultHandler.handle(Future.failedFuture(error)),
+                () -> resultHandler.handle(Future.succeededFuture())
+            );
         return this;
     }
 
     @Override
     public VetDatabaseService isUserExist(JsonObject query, Handler<AsyncResult<Boolean>> resultHandler) {
-        mongo.findOne(USER_COLLECTION, query, new JsonObject().put("_id", 1), lookup -> {
-            if (lookup.failed()) {
-                resultHandler.handle(Future.failedFuture(lookup.cause()));
-                return;
-            }
-            boolean isExisted = lookup.result() != null;
-            resultHandler.handle(Future.succeededFuture(isExisted));
-        });
+        mongo
+            .rxFindOne(USER_COLLECTION, query, new JsonObject().put("_id", 1))
+            .subscribe(
+                userExisted -> resultHandler.handle(Future.succeededFuture(true)),
+                error -> resultHandler.handle(Future.failedFuture(error)),
+                () -> resultHandler.handle(Future.succeededFuture(false))
+            );
         return this;
     }
 }

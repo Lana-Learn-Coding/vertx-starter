@@ -1,10 +1,10 @@
 package com.example.vet.database;
 
 import com.example.vet.QueueAddresses;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.MongoClient;
+import io.vertx.reactivex.core.AbstractVerticle;
+import io.vertx.reactivex.ext.mongo.MongoClient;
 import io.vertx.serviceproxy.ServiceBinder;
 
 public class VetDatabase extends AbstractVerticle {
@@ -16,7 +16,7 @@ public class VetDatabase extends AbstractVerticle {
                 startPromise.fail(ready.cause());
                 return;
             }
-            ServiceBinder binder = new ServiceBinder(vertx);
+            ServiceBinder binder = new ServiceBinder(vertx.getDelegate());
             binder.setAddress(QueueAddresses.VET_DB_QUEUE.address).register(VetDatabaseService.class, ready.result());
             startPromise.complete();
         });

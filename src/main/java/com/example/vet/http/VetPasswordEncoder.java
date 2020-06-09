@@ -1,8 +1,8 @@
 package com.example.vet.http;
 
 import com.example.vet.QueueAddresses;
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.eventbus.Message;
+import io.vertx.reactivex.core.AbstractVerticle;
+import io.vertx.reactivex.core.eventbus.Message;
 
 public class VetPasswordEncoder extends AbstractVerticle {
     private enum ErrorCodes {

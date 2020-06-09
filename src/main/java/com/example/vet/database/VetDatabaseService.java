@@ -9,7 +9,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.MongoClient;
+import io.vertx.reactivex.ext.mongo.MongoClient;
 
 @ProxyGen
 @VertxGen
@@ -20,8 +20,8 @@ public interface VetDatabaseService {
     }
 
     @GenIgnore
-    static VetDatabaseService createProxy(Vertx vertx, String address) {
-        return new VetDatabaseServiceVertxEBProxy(vertx, address);
+    static com.example.vet.database.reactivex.VetDatabaseService createProxy(Vertx vertx, String address) {
+        return new com.example.vet.database.reactivex.VetDatabaseService(new VetDatabaseServiceVertxEBProxy(vertx, address));
     }
 
     @Fluent
