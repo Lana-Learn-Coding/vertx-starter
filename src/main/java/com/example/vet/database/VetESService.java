@@ -1,10 +1,7 @@
 package com.example.vet.database;
 
 import com.example.vet.database.impl.VetESServiceImpl;
-import io.vertx.codegen.annotations.Fluent;
-import io.vertx.codegen.annotations.GenIgnore;
-import io.vertx.codegen.annotations.ProxyGen;
-import io.vertx.codegen.annotations.VertxGen;
+import io.vertx.codegen.annotations.*;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -35,7 +32,7 @@ public interface VetESService {
     VetESService fetchAllUser(Handler<AsyncResult<JsonArray>> resultHandler);
 
     @Fluent
-    VetESService fetchUser(String id, JsonObject fields, Handler<AsyncResult<JsonObject>> resultHandler);
+    VetESService fetchUser(String id, JsonObject fields, Handler<AsyncResult<@Nullable JsonObject>> resultHandler);
 
     @Fluent
     VetESService save(JsonObject user, Handler<AsyncResult<JsonObject>> resultHandler);

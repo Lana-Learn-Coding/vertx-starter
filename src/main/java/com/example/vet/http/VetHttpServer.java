@@ -57,14 +57,9 @@ public class VetHttpServer extends AbstractVerticle {
         dbService
             .rxFetchUser(context.request().getParam("id"), new JsonObject())
             .subscribe(
-                user -> {
-                    if (user == null) {
-                        responseNotFound(context);
-                        return;
-                    }
-                    responseOk(context, user.encode());
-                },
-                context::fail
+                user -> responseOk(context, user.encode()),
+                context::fail,
+                () -> responseNotFound(context)
             );
     }
 
@@ -84,7 +79,12 @@ public class VetHttpServer extends AbstractVerticle {
         user.put("_id", id);
         dbService
             .rxIsUserExist(id)
-            .flatMapMaybe(userExisted -> userExisted ? dbService.rxSave(user).toMaybe() : Maybe.empty())
+            .flatMapMaybe(userExisted -> {
+                if (userExisted) {
+                    return Maybe.empty();
+                }
+                return hashPasswordThenSaveUser(user).toMaybe();
+            })
             .subscribe(
                 updatedUser -> responseOk(context, user.encode()),
                 context::fail,
