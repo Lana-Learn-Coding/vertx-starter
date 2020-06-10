@@ -5,6 +5,7 @@ plugins {
 
 ext {
     vertxVersion = "3.9.1"
+    validatorVersion = "6.1.5.Final"
 }
 
 group = "org.example"
@@ -29,15 +30,24 @@ repositories {
 dependencies {
     compile "io.vertx:vertx-core:${vertxVersion}"
     compile "io.vertx:vertx-web:${vertxVersion}"
+
     compile "io.vertx:vertx-rx-java2:${vertxVersion}"
     compile "io.vertx:vertx-rx-java2-gen:${vertxVersion}"
     compile "io.vertx:vertx-service-proxy:${vertxVersion}"
-    compileOnly "io.vertx:vertx-codegen:${vertxVersion}"
+    compile "io.vertx:vertx-codegen:${vertxVersion}"
     annotationProcessor "io.vertx:vertx-service-proxy:${vertxVersion}:processor"
     annotationProcessor "io.vertx:vertx-codegen:${vertxVersion}:processor"
     annotationProcessor "io.vertx:vertx-rx-java2-gen:${vertxVersion}"
 
     compile "org.elasticsearch:elasticsearch:2.4.0"
+
+    // javax validation
+    compile "javax.validation:validation-api:2.0.1.Final"
+    compile "org.hibernate:hibernate-validator:${validatorVersion}"
+    compile "javax.el:javax.el-api:3.0.0"
+    compile group: 'org.glassfish', name: 'javax.el', version: '3.0.0'
+    annotationProcessor "org.hibernate:hibernate-validator-annotation-processor:${validatorVersion}"
+
 
     compileOnly "org.projectlombok:lombok:1.18.12"
     annotationProcessor "org.projectlombok:lombok:1.18.12"

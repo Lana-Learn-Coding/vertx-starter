@@ -2,6 +2,7 @@ package com.example.vet.http;
 
 import com.example.vet.QueueAddresses;
 import com.example.vet.database.VetESService;
+import com.example.vet.validation.UserValidationHandler;
 import io.reactivex.Maybe;
 import io.reactivex.Single;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -21,6 +22,7 @@ public class VetHttpServer extends AbstractVerticle {
         final Router router = Router.router(vertx);
         // Enable the body parser to we can get the form data and json documents in out context.
         router.route().handler(BodyHandler.create());
+        router.route().handler(new UserValidationHandler());
 
         router.get("/users").handler(this::fetchAllUser);
         router.post("/users").handler(this::createUser);
@@ -29,15 +31,17 @@ public class VetHttpServer extends AbstractVerticle {
         router.delete("/users/:id").handler(this::deleteUser);
 
         // Print error stack trace to console
-        router.errorHandler(500, rc -> {
-            System.err.println("Handling failure");
-            Throwable failure = rc.failure();
-            if (failure != null) {
-                failure.printStackTrace();
-            }
-        });
+        router.errorHandler(500, this::onError);
 
         vertx.createHttpServer().requestHandler(router).listen(8000);
+    }
+
+
+    private void onError(RoutingContext context) {
+        Throwable failure = context.failure();
+        if (failure != null) {
+            failure.printStackTrace();
+        }
     }
 
     private void fetchAllUser(RoutingContext context) {
