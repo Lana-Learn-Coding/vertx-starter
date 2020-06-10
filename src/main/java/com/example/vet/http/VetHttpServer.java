@@ -5,6 +5,7 @@ import com.example.vet.database.VetESService;
 import com.example.vet.validation.UserValidationHandler;
 import io.reactivex.Maybe;
 import io.reactivex.Single;
+import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
@@ -20,17 +21,19 @@ public class VetHttpServer extends AbstractVerticle {
     public void start() {
         dbService = VetESService.createProxy(vertx.getDelegate(), QueueAddresses.VET_DB_QUEUE.address);
         final Router router = Router.router(vertx);
+        final Handler<RoutingContext> userValidation = new UserValidationHandler();
         // Enable the body parser to we can get the form data and json documents in out context.
         router.route().handler(BodyHandler.create());
-        router.route().handler(new UserValidationHandler());
 
         router.get("/users").handler(this::fetchAllUser);
-        router.post("/users").handler(this::createUser);
         router.get("/users/:id").handler(this::fetchUser);
-        router.put("/users/:id").handler(this::updateUser);
         router.delete("/users/:id").handler(this::deleteUser);
 
-        // Print error stack trace to console
+        // User body data
+        router.post("/users").handler(userValidation).handler(this::createUser);
+        router.put("/users/:id").handler(userValidation).handler(this::updateUser);
+
+
         router.errorHandler(500, this::onError);
 
         vertx.createHttpServer().requestHandler(router).listen(8000);
