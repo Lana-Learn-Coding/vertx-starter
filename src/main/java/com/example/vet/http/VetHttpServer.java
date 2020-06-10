@@ -97,7 +97,7 @@ public class VetHttpServer extends AbstractVerticle {
         return vertx.eventBus()
             .rxRequest(QueueAddresses.PASSWORD_ENCODER_QUEUE.address, user.getString(PASSWORD_FIELD), options)
             .flatMap(hashed -> {
-                user.put(PASSWORD_FIELD, hashed);
+                user.put(PASSWORD_FIELD, hashed.body());
                 return dbService.rxSave(user);
             });
     }
