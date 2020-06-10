@@ -1,136 +1,141 @@
 package com.example.vet.http;
 
-import com.example.vet.database.VetDatabaseService;
-import io.vertx.core.AbstractVerticle;
+import com.example.vet.QueueAddresses;
+import com.example.vet.database.VetESService;
+import com.example.vet.validation.UserValidationHandler;
+import io.reactivex.Maybe;
+import io.reactivex.Single;
+import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.reactivex.core.AbstractVerticle;
+import io.vertx.reactivex.ext.web.Router;
+import io.vertx.reactivex.ext.web.RoutingContext;
+import io.vertx.reactivex.ext.web.handler.BodyHandler;
 
 public class VetHttpServer extends AbstractVerticle {
-    private final String VET_DB_QUEUE = "dbclient.queue";
-    private final String PASSWORD_ENCODER_QUEUE = "encoder.worker.queue";
-    private VetDatabaseService dbService;
+    private com.example.vet.database.reactivex.VetESService dbService;
 
     @Override
     public void start() {
-        dbService = VetDatabaseService.createProxy(vertx, VET_DB_QUEUE);
+        dbService = VetESService.createProxy(vertx.getDelegate(), QueueAddresses.VET_DB_QUEUE.address);
         final Router router = Router.router(vertx);
+        final Handler<RoutingContext> userValidation = new UserValidationHandler();
         // Enable the body parser to we can get the form data and json documents in out context.
         router.route().handler(BodyHandler.create());
 
+        router.get("/users/search").handler(this::searchUser);
         router.get("/users").handler(this::fetchAllUser);
-        router.post("/users").handler(this::createUser);
         router.get("/users/:id").handler(this::fetchUser);
-        router.put("/users/:id").handler(this::updateUser);
         router.delete("/users/:id").handler(this::deleteUser);
 
-        // Print error stack trace to console
-        router.errorHandler(500, rc -> {
-            System.err.println("Handling failure");
-            Throwable failure = rc.failure();
-            if (failure != null) {
-                failure.printStackTrace();
-            }
-        });
+        // User body data
+        router.post("/users").handler(userValidation).handler(this::createUser);
+        router.put("/users/:id").handler(userValidation).handler(this::updateUser);
+
+
+        router.errorHandler(500, this::onError);
 
         vertx.createHttpServer().requestHandler(router).listen(8000);
     }
 
+
+    private void onError(RoutingContext context) {
+        Throwable failure = context.failure();
+        if (failure != null) {
+            failure.printStackTrace();
+        }
+    }
+
+    private void searchUser(RoutingContext context) {
+        dbService
+            .rxFindAllUser(context.getBodyAsJson())
+            .subscribe(
+                listUser -> responseOk(context, listUser.encode()),
+                error -> context.response().setStatusCode(400).end()
+            );
+    }
+
     private void fetchAllUser(RoutingContext context) {
-        dbService.fetchAllUser(new JsonObject(), result -> {
-            if (result.failed()) {
-                context.fail(result.cause());
-            } else {
-                context.response()
-                        .setStatusCode(200)
-                        .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                        .end(result.result().encode());
-            }
-        });
+        dbService
+            .rxFetchAllUser()
+            .subscribe(
+                listUser -> responseOk(context, listUser.encode()),
+                context::fail
+            );
     }
 
     private void fetchUser(RoutingContext context) {
-        dbService.fetchUser(new JsonObject().put("_id", context.request().getParam("id")), new JsonObject(), result -> {
-            if (result.failed()) {
-                context.fail(result.cause());
-            } else {
-                JsonObject user = result.result();
-                if (user == null) {
-                    context.response().setStatusCode(404).end();
-                } else {
-                    context.response()
-                            .setStatusCode(200)
-                            .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                            .end(user.encode());
-                }
-            }
-        });
+        dbService
+            .rxFetchUser(context.request().getParam("id"), new JsonObject())
+            .subscribe(
+                user -> responseOk(context, user.encode()),
+                context::fail,
+                () -> responseNotFound(context)
+            );
     }
 
     private void createUser(RoutingContext context) {
         final JsonObject user = context.getBodyAsJson();
         // ignore the _id field
         user.remove("_id");
-
-        hashPasswordThenSaveThenResponse(context, user);
+        hashPasswordThenSaveUser(user).subscribe(
+            createdUser -> responseOk(context, createdUser.encode()),
+            context::fail
+        );
     }
 
     private void updateUser(RoutingContext context) {
         final JsonObject user = context.getBodyAsJson();
         final String id = context.request().getParam("id");
-        dbService.isUserExist(new JsonObject().put("_id", id), lookup -> {
-            if (lookup.failed()) {
-                context.fail(lookup.cause());
-            } else {
-                boolean userExisted = lookup.result();
+        user.put("_id", id);
+        dbService
+            .rxIsUserExist(id)
+            .flatMapMaybe(userExisted -> {
                 if (userExisted) {
-                    hashPasswordThenSaveThenResponse(context, user);
-                } else {
-                    context.response().setStatusCode(404);
+                    return Maybe.empty();
                 }
-            }
-        });
+                return hashPasswordThenSaveUser(user).toMaybe();
+            })
+            .subscribe(
+                updatedUser -> responseOk(context, user.encode()),
+                context::fail,
+                () -> responseNotFound(context)
+            );
     }
 
-    private void hashPasswordThenSaveThenResponse(RoutingContext context, JsonObject user) {
-        if (user.containsKey("password")) {
-            DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
-            vertx.eventBus().request(PASSWORD_ENCODER_QUEUE, user.getString("password"), options, reply -> {
-                if (reply.failed()) {
-                    context.fail(reply.cause());
-                } else {
-                    user.put("password", reply.result().body());
-                    saveUserThenResponse(context, user);
-                }
-            });
-        } else {
-            saveUserThenResponse(context, user);
+    private Single<JsonObject> hashPasswordThenSaveUser(JsonObject user) {
+        final String PASSWORD_FIELD = "password";
+        if (!user.containsKey(PASSWORD_FIELD)) {
+            return dbService.rxSave(user);
         }
-    }
-
-    private void saveUserThenResponse(RoutingContext context, JsonObject user) {
-        dbService.save(user, result -> {
-            if (result.failed()) {
-                context.fail(result.cause());
-            } else {
-                context.response()
-                        .setStatusCode(200)
-                        .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                        .end(result.result().encode());
-            }
-        });
+        DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
+        return vertx.eventBus()
+            .rxRequest(QueueAddresses.PASSWORD_ENCODER_QUEUE.address, user.getString(PASSWORD_FIELD), options)
+            .flatMap(hashed -> {
+                user.put(PASSWORD_FIELD, hashed.body());
+                return dbService.rxSave(user);
+            });
     }
 
     private void deleteUser(RoutingContext context) {
-        dbService.deleteUser(new JsonObject().put("_id", context.request().getParam("id")), result -> {
-            if (result.failed()) {
-                context.fail(result.cause());
-            } else {
-                context.response().setStatusCode(204).end();
-            }
-        });
+        dbService
+            .rxDeleteUser(context.request().getParam("id"))
+            .subscribe(
+                () -> context.response().setStatusCode(204).end(),
+                context::fail
+            );
+    }
+
+    private void responseOk(RoutingContext context, String data) {
+        context.response()
+            .setStatusCode(200)
+            .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+            .end(data);
+    }
+
+    private void responseNotFound(RoutingContext context) {
+        context.response().setStatusCode(404).end();
     }
 }

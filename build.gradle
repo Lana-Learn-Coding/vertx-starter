@@ -1,24 +1,56 @@
 plugins {
-    id 'java'
+    id "java"
+    id "idea"
 }
 
-group 'org.example'
-version '1.0-SNAPSHOT'
+ext {
+    vertxVersion = "3.9.1"
+    validatorVersion = "6.1.5.Final"
+}
+
+group = "org.example"
+version = "1.0-SNAPSHOT"
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+configurations {
+    developmentOnly
+    runtimeClasspath {
+        extendsFrom developmentOnly
+    }
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile group: 'io.vertx', name: 'vertx-core', version: '3.9.1'
-    compile group: 'io.vertx', name: 'vertx-web', version: '3.9.1'
-    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
-    compile group: 'io.vertx', name: 'vertx-mongo-client', version: '3.9.1'
-    compile group: 'io.vertx', name: 'vertx-service-proxy', version: '3.9.1'
-    compileOnly group: 'io.vertx', name: 'vertx-codegen', version: '3.9.1'
+    compile "io.vertx:vertx-core:${vertxVersion}"
+    compile "io.vertx:vertx-web:${vertxVersion}"
 
-    annotationProcessor group: 'io.vertx', name: 'vertx-service-proxy', version: '3.9.1', classifier:'processor'
-    annotationProcessor group: 'io.vertx', name: 'vertx-codegen', version: '3.9.1', classifier:'processor'
+    compile "io.vertx:vertx-rx-java2:${vertxVersion}"
+    compile "io.vertx:vertx-rx-java2-gen:${vertxVersion}"
+    compile "io.vertx:vertx-service-proxy:${vertxVersion}"
+    compile "io.vertx:vertx-codegen:${vertxVersion}"
+    annotationProcessor "io.vertx:vertx-service-proxy:${vertxVersion}:processor"
+    annotationProcessor "io.vertx:vertx-codegen:${vertxVersion}:processor"
+    annotationProcessor "io.vertx:vertx-rx-java2-gen:${vertxVersion}"
 
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile "org.elasticsearch:elasticsearch:2.4.0"
+
+    // javax validation
+    compile "javax.validation:validation-api:2.0.1.Final"
+    compile "org.hibernate:hibernate-validator:${validatorVersion}"
+    compile "javax.el:javax.el-api:3.0.0"
+    compile group: 'org.glassfish', name: 'javax.el', version: '3.0.0'
+    annotationProcessor "org.hibernate:hibernate-validator-annotation-processor:${validatorVersion}"
+
+
+    compileOnly "org.projectlombok:lombok:1.18.12"
+    annotationProcessor "org.projectlombok:lombok:1.18.12"
+
+    testCompile "junit:junit:4.12"
 }

@@ -3,7 +3,11 @@ package com.example.vet;
 import com.example.vet.database.VetDatabase;
 import com.example.vet.http.VetHttpServer;
 import com.example.vet.http.VetPasswordEncoder;
-import io.vertx.core.*;
+import io.reactivex.Completable;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Launcher;
+import io.vertx.core.Promise;
+import io.vertx.reactivex.core.AbstractVerticle;
 
 public class VetMain extends AbstractVerticle {
     public static void main(String[] args) {
@@ -12,32 +16,23 @@ public class VetMain extends AbstractVerticle {
 
     @Override
     public void start(Promise<Void> promise) {
-        deployDatabase().compose(dbId ->
-                deployWorker().compose(severId -> deployHttpServer())
-        )
-                .onComplete(ar -> promise.complete())
-                .onFailure(ar -> promise.fail(ar.getCause()));
+        deployDatabase()
+            .andThen(deployWorker())
+            .andThen(deployHttpServer())
+            .subscribe(promise::complete, promise::fail);
     }
 
-    private Future<String> deployDatabase() {
-        Promise<String> deployment = Promise.promise();
-        vertx.deployVerticle(new VetDatabase(), deployment);
-        return deployment.future();
+    private Completable deployDatabase() {
+        return Completable.fromSingle(vertx.rxDeployVerticle(new VetDatabase()));
     }
 
-    private Future<String> deployHttpServer() {
-        Promise<String> deployment = Promise.promise();
+    private Completable deployHttpServer() {
         DeploymentOptions options = new DeploymentOptions().setInstances(1);
-        vertx.deployVerticle(VetHttpServer.class, options, deployment);
-        return deployment.future();
+        return Completable.fromSingle(vertx.rxDeployVerticle(VetHttpServer.class.getName(), options));
     }
 
-    private Future<String> deployWorker() {
-        Promise<String> deployment = Promise.promise();
-        DeploymentOptions options = new DeploymentOptions()
-                .setWorker(true)
-                .setInstances(2);
-        vertx.deployVerticle(VetPasswordEncoder.class, options, deployment);
-        return deployment.future();
+    private Completable deployWorker() {
+        DeploymentOptions options = new DeploymentOptions().setWorker(true).setInstances(2);
+        return Completable.fromSingle(vertx.rxDeployVerticle(VetPasswordEncoder.class.getName(), options));
     }
 }
