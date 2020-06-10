@@ -62,7 +62,11 @@ public class VetESServiceImpl implements VetESService {
             .execute(new ActionListener<GetResponse>() {
                 @Override
                 public void onResponse(GetResponse getFields) {
-                    resultHandler.handle(Future.succeededFuture(new JsonObject(getFields.getSourceAsMap())));
+                    if (getFields.isExists()) {
+                        resultHandler.handle(Future.succeededFuture(new JsonObject(getFields.getSourceAsMap())));
+                        return;
+                    }
+                    resultHandler.handle(Future.succeededFuture());
                 }
 
                 @Override
