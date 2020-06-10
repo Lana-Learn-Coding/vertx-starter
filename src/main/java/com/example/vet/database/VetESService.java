@@ -26,9 +26,6 @@ public interface VetESService {
     VetESService findAllUser(JsonObject query, Handler<AsyncResult<JsonArray>> resultHandler);
 
     @Fluent
-    VetESService findOneUser(JsonObject query, JsonObject fields, Handler<AsyncResult<JsonObject>> resultHandler);
-
-    @Fluent
     VetESService fetchAllUser(Handler<AsyncResult<JsonArray>> resultHandler);
 
     @Fluent

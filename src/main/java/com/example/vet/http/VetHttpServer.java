@@ -25,6 +25,7 @@ public class VetHttpServer extends AbstractVerticle {
         // Enable the body parser to we can get the form data and json documents in out context.
         router.route().handler(BodyHandler.create());
 
+        router.get("/users/search").handler(this::searchUser);
         router.get("/users").handler(this::fetchAllUser);
         router.get("/users/:id").handler(this::fetchUser);
         router.delete("/users/:id").handler(this::deleteUser);
@@ -45,6 +46,15 @@ public class VetHttpServer extends AbstractVerticle {
         if (failure != null) {
             failure.printStackTrace();
         }
+    }
+
+    private void searchUser(RoutingContext context) {
+        dbService
+            .rxFindAllUser(context.getBodyAsJson())
+            .subscribe(
+                listUser -> responseOk(context, listUser.encode()),
+                error -> context.response().setStatusCode(400).end()
+            );
     }
 
     private void fetchAllUser(RoutingContext context) {
