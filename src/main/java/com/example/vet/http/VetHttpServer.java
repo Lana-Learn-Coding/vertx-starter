@@ -1,7 +1,7 @@
 package com.example.vet.http;
 
 import com.example.vet.QueueAddresses;
-import com.example.vet.database.VetDatabaseService;
+import com.example.vet.database.VetESService;
 import io.reactivex.Maybe;
 import io.reactivex.Single;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -13,11 +13,11 @@ import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
 
 public class VetHttpServer extends AbstractVerticle {
-    private com.example.vet.database.reactivex.VetDatabaseService dbService;
+    private com.example.vet.database.reactivex.VetESService dbService;
 
     @Override
     public void start() {
-        dbService = VetDatabaseService.createProxy(vertx.getDelegate(), QueueAddresses.VET_DB_QUEUE.address);
+        dbService = VetESService.createProxy(vertx.getDelegate(), QueueAddresses.VET_DB_QUEUE.address);
         final Router router = Router.router(vertx);
         // Enable the body parser to we can get the form data and json documents in out context.
         router.route().handler(BodyHandler.create());
@@ -42,7 +42,7 @@ public class VetHttpServer extends AbstractVerticle {
 
     private void fetchAllUser(RoutingContext context) {
         dbService
-            .rxFetchAllUser(new JsonObject())
+            .rxFetchAllUser()
             .subscribe(
                 listUser -> responseOk(context, listUser.encode()),
                 context::fail
@@ -51,7 +51,7 @@ public class VetHttpServer extends AbstractVerticle {
 
     private void fetchUser(RoutingContext context) {
         dbService
-            .rxFetchUser(new JsonObject().put("_id", context.request().getParam("id")), new JsonObject())
+            .rxFetchUser(context.request().getParam("id"), new JsonObject())
             .subscribe(
                 user -> {
                     if (user == null) {
@@ -77,8 +77,9 @@ public class VetHttpServer extends AbstractVerticle {
     private void updateUser(RoutingContext context) {
         final JsonObject user = context.getBodyAsJson();
         final String id = context.request().getParam("id");
+        user.put("_id", id);
         dbService
-            .rxIsUserExist(new JsonObject().put("_id", id))
+            .rxIsUserExist(id)
             .flatMapMaybe(userExisted -> userExisted ? dbService.rxSave(user).toMaybe() : Maybe.empty())
             .subscribe(
                 updatedUser -> responseOk(context, user.encode()),
@@ -103,7 +104,7 @@ public class VetHttpServer extends AbstractVerticle {
 
     private void deleteUser(RoutingContext context) {
         dbService
-            .rxDeleteUser(new JsonObject().put("_id", context.request().getParam("id")))
+            .rxDeleteUser(context.request().getParam("id"))
             .subscribe(
                 () -> context.response().setStatusCode(204).end(),
                 context::fail
