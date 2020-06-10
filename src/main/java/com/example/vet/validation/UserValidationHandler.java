@@ -20,6 +20,7 @@ public class UserValidationHandler implements Handler<RoutingContext> {
     public void handle(RoutingContext context) {
         JsonObject body = context.getBodyAsJson();
         if (body == null) {
+            context.next();
             return;
         }
 
@@ -28,17 +29,18 @@ public class UserValidationHandler implements Handler<RoutingContext> {
         Validator validator = factory.getValidator();
         Set<ConstraintViolation<User>> violations = validator.validate(user);
 
-        if (!violations.isEmpty()) {
-            JsonObject errors = new JsonObject();
-            violations.forEach(violation -> errors.put(violation.getPropertyPath().toString(), violation.getMessage()));
-            context.response()
-                .setStatusCode(400)
-                .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                .end(errors.encode());
+        if (violations.isEmpty()) {
+            // remove un-mapped fields, then forward
+            context.setBody(Buffer.buffer(JsonObject.mapFrom(user).toString()));
+            context.next();
             return;
         }
 
-        context.setBody(Buffer.buffer(JsonObject.mapFrom(user).toString()));
-        context.next();
+        JsonObject errors = new JsonObject();
+        violations.forEach(violation -> errors.put(violation.getPropertyPath().toString(), violation.getMessage()));
+        context.response()
+            .setStatusCode(400)
+            .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+            .end(errors.encode());
     }
 }
