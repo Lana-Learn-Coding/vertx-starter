@@ -28,11 +28,21 @@ public class VetESServiceImpl implements VetESService {
 
     @Override
     public VetESService findAllUser(JsonObject query, Handler<AsyncResult<JsonArray>> resultHandler) {
-        return this;
-    }
+        client
+            .prepareSearch(INDEX)
+            .setTypes(TYPE)
+            .setQuery(query.toString())
+            .execute(new ActionListener<SearchResponse>() {
+                @Override
+                public void onResponse(SearchResponse searchResponse) {
+                    resultHandler.handle(Future.succeededFuture(VetESServiceMapper.mapToJsonArray(searchResponse)));
+                }
 
-    @Override
-    public VetESService findOneUser(JsonObject query, JsonObject fields, Handler<AsyncResult<JsonObject>> resultHandler) {
+                @Override
+                public void onFailure(Throwable e) {
+                    resultHandler.handle(Future.failedFuture(e));
+                }
+            });
         return this;
     }
 
