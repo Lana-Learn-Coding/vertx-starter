@@ -1,12 +1,12 @@
 package com.example.vet.model;
 
-import com.example.vet.validation.Password;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.validation.constraints.*;
+import java.util.Date;
 
 @Getter
 @Setter
@@ -18,14 +18,31 @@ public class User {
     @NotBlank(message = "Name must not blank")
     private String name;
 
+    private String about;
+
     @Max(value = 200, message = "Invalid age: Too large (max 200)")
     @Min(value = 18, message = "Invalid age: Too small (min 18)")
-    private String age;
+    private Integer age;
 
-    @NotNull(message = "Password required")
-    @Password(message = "Bad password. Require at least 1 number, 1 uppercase letter and at least 8 character")
-    private String password;
+    private String birth;
+
+    @Min(value = 0, message = "Height should not be negative")
+    private Integer height;
 
     @Email(message = "Invalid email")
     private String email;
+
+    @Pattern(regexp = "^0[0-9]{6,14}$")
+    private String phone;
+
+    private String address;
+
+    @NotNull
+    private Boolean activated;
+
+    @NotNull
+    private Date activatedDate;
+
+    @NotNull
+    private Date expirationDate;
 }
