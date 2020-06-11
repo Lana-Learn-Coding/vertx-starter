@@ -7,9 +7,12 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.bulk.BulkRequestBuilder;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.exists.ExistsResponse;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateResponse;
@@ -107,6 +110,29 @@ public class VetESServiceImpl implements VetESService {
             return update(user.getString("_id"), user, fetchIdHandler);
         }
         return create(user, fetchIdHandler);
+    }
+
+    @Override
+    public VetESService bulkCreate(JsonArray users, Handler<AsyncResult<Void>> resultHandler) {
+        BulkRequestBuilder requestBuilder = client.prepareBulk();
+        users.forEach(user -> {
+            IndexRequestBuilder indexRequestBuilder = client
+                .prepareIndex(INDEX, TYPE)
+                .setSource(user.toString());
+            requestBuilder.add(indexRequestBuilder);
+        });
+        requestBuilder.execute(new ActionListener<BulkResponse>() {
+            @Override
+            public void onResponse(BulkResponse bulkItemResponses) {
+                resultHandler.handle(Future.succeededFuture());
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+                resultHandler.handle(Future.failedFuture(e));
+            }
+        });
+        return this;
     }
 
     private VetESService create(JsonObject user, Handler<AsyncResult<String>> resultHandler) {
