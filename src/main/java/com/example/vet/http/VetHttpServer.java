@@ -15,6 +15,7 @@ import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
 
 public class VetHttpServer extends AbstractVerticle {
+    private final String INDEX = "test";
     private com.example.vet.database.reactivex.VetESService dbService;
 
     @Override
@@ -50,30 +51,30 @@ public class VetHttpServer extends AbstractVerticle {
 
     private void searchUser(RoutingContext context) {
         dbService
-            .rxFindAllUser(context.getBodyAsJson())
-            .subscribe(
-                listUser -> responseOk(context, listUser.encode()),
-                error -> context.response().setStatusCode(400).end()
-            );
+                .rxFindAllUser(INDEX, context.getBodyAsJson())
+                .subscribe(
+                        listUser -> responseOk(context, listUser.encode()),
+                        error -> context.response().setStatusCode(400).end()
+                );
     }
 
     private void fetchAllUser(RoutingContext context) {
         dbService
-            .rxFetchAllUser()
-            .subscribe(
-                listUser -> responseOk(context, listUser.encode()),
-                context::fail
-            );
+                .rxFetchAllUser(INDEX)
+                .subscribe(
+                        listUser -> responseOk(context, listUser.encode()),
+                        context::fail
+                );
     }
 
     private void fetchUser(RoutingContext context) {
         dbService
-            .rxFetchUser(context.request().getParam("id"), new JsonObject())
-            .subscribe(
-                user -> responseOk(context, user.encode()),
-                context::fail,
-                () -> responseNotFound(context)
-            );
+                .rxFetchUser(INDEX, context.request().getParam("id"), new JsonObject())
+                .subscribe(
+                        user -> responseOk(context, user.encode()),
+                        context::fail,
+                        () -> responseNotFound(context)
+                );
     }
 
     private void createUser(RoutingContext context) {
@@ -81,8 +82,8 @@ public class VetHttpServer extends AbstractVerticle {
         // ignore the _id field
         user.remove("_id");
         hashPasswordThenSaveUser(user).subscribe(
-            createdUser -> responseOk(context, createdUser.encode()),
-            context::fail
+                createdUser -> responseOk(context, createdUser.encode()),
+                context::fail
         );
     }
 
@@ -91,48 +92,48 @@ public class VetHttpServer extends AbstractVerticle {
         final String id = context.request().getParam("id");
         user.put("_id", id);
         dbService
-            .rxIsUserExist(id)
-            .flatMapMaybe(userExisted -> {
-                if (userExisted) {
-                    return Maybe.empty();
-                }
-                return hashPasswordThenSaveUser(user).toMaybe();
-            })
-            .subscribe(
-                updatedUser -> responseOk(context, user.encode()),
-                context::fail,
-                () -> responseNotFound(context)
-            );
+                .rxIsUserExist(INDEX, id)
+                .flatMapMaybe(userExisted -> {
+                    if (userExisted) {
+                        return Maybe.empty();
+                    }
+                    return hashPasswordThenSaveUser(user).toMaybe();
+                })
+                .subscribe(
+                        updatedUser -> responseOk(context, user.encode()),
+                        context::fail,
+                        () -> responseNotFound(context)
+                );
     }
 
     private Single<JsonObject> hashPasswordThenSaveUser(JsonObject user) {
         final String PASSWORD_FIELD = "password";
         if (!user.containsKey(PASSWORD_FIELD)) {
-            return dbService.rxSave(user);
+            return dbService.rxSave(INDEX, user);
         }
         DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
         return vertx.eventBus()
-            .rxRequest(QueueAddresses.PASSWORD_ENCODER_QUEUE.address, user.getString(PASSWORD_FIELD), options)
-            .flatMap(hashed -> {
-                user.put(PASSWORD_FIELD, hashed.body());
-                return dbService.rxSave(user);
-            });
+                .rxRequest(QueueAddresses.PASSWORD_ENCODER_QUEUE.address, user.getString(PASSWORD_FIELD), options)
+                .flatMap(hashed -> {
+                    user.put(PASSWORD_FIELD, hashed.body());
+                    return dbService.rxSave(INDEX, user);
+                });
     }
 
     private void deleteUser(RoutingContext context) {
         dbService
-            .rxDeleteUser(context.request().getParam("id"))
-            .subscribe(
-                () -> context.response().setStatusCode(204).end(),
-                context::fail
-            );
+                .rxDeleteUser(INDEX, context.request().getParam("id"))
+                .subscribe(
+                        () -> context.response().setStatusCode(204).end(),
+                        context::fail
+                );
     }
 
     private void responseOk(RoutingContext context, String data) {
         context.response()
-            .setStatusCode(200)
-            .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-            .end(data);
+                .setStatusCode(200)
+                .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .end(data);
     }
 
     private void responseNotFound(RoutingContext context) {

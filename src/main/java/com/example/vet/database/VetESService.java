@@ -23,20 +23,20 @@ public interface VetESService {
     }
 
     @Fluent
-    VetESService findAllUser(JsonObject query, Handler<AsyncResult<JsonArray>> resultHandler);
+    VetESService findAllUser(String index, JsonObject query, Handler<AsyncResult<JsonArray>> resultHandler);
 
     @Fluent
-    VetESService fetchAllUser(Handler<AsyncResult<JsonArray>> resultHandler);
+    VetESService fetchAllUser(String index, Handler<AsyncResult<JsonArray>> resultHandler);
 
     @Fluent
-    VetESService fetchUser(String id, JsonObject fields, Handler<AsyncResult<@Nullable JsonObject>> resultHandler);
+    VetESService fetchUser(String index, String id, JsonObject fields, Handler<AsyncResult<@Nullable JsonObject>> resultHandler);
 
     @Fluent
-    VetESService save(JsonObject user, Handler<AsyncResult<JsonObject>> resultHandler);
+    VetESService save(String index, JsonObject user, Handler<AsyncResult<JsonObject>> resultHandler);
 
     @Fluent
-    VetESService deleteUser(String id, Handler<AsyncResult<Void>> resultHandler);
+    VetESService deleteUser(String index, String id, Handler<AsyncResult<Void>> resultHandler);
 
     @Fluent
-    VetESService isUserExist(String id, Handler<AsyncResult<Boolean>> resultHandler);
+    VetESService isUserExist(String index, String id, Handler<AsyncResult<Boolean>> resultHandler);
 }
