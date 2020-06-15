@@ -8,6 +8,7 @@ import io.reactivex.Single;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.reactivex.core.AbstractVerticle;
 import io.vertx.reactivex.ext.web.Router;
@@ -24,17 +25,17 @@ public class VetHttpServer extends AbstractVerticle {
         final Router router = Router.router(vertx);
         final Handler<RoutingContext> userValidation = new UserValidationHandler();
         // Enable the body parser to we can get the form data and json documents in out context.
-        router.route().handler(BodyHandler.create());
+        router.route().handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(true));
 
         router.get("/users/search").handler(this::searchUser);
         router.get("/users").handler(this::fetchAllUser);
         router.get("/users/:id").handler(this::fetchUser);
         router.delete("/users/:id").handler(this::deleteUser);
+        router.post("/users/upload").handler(this::uploadUsers);
 
         // User body data
         router.post("/users").handler(userValidation).handler(this::createUser);
         router.put("/users/:id").handler(userValidation).handler(this::updateUser);
-
 
         router.errorHandler(500, this::onError);
 
@@ -127,6 +128,18 @@ public class VetHttpServer extends AbstractVerticle {
                         () -> context.response().setStatusCode(204).end(),
                         context::fail
                 );
+    }
+
+    private void uploadUsers(RoutingContext context) {
+        context.fileUploads().forEach(fileUpload -> {
+            vertx.fileSystem()
+                .rxReadFile(fileUpload.uploadedFileName())
+                .flatMapCompletable(buffer -> dbService.rxBulkCreate(new JsonArray(buffer.getDelegate())))
+                .subscribe(
+                    () -> context.response().setStatusCode(201).end(),
+                    (error) -> context.response().setStatusCode(400).end()
+                );
+        });
     }
 
     private void responseOk(RoutingContext context, String data) {

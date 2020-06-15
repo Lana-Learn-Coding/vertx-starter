@@ -35,6 +35,9 @@ public interface VetESService {
     VetESService save(String index, JsonObject user, Handler<AsyncResult<JsonObject>> resultHandler);
 
     @Fluent
+    VetESService bulkCreate(String index, JsonArray users, Handler<AsyncResult<Void>> resultHandler);
+
+    @Fluent
     VetESService deleteUser(String index, String id, Handler<AsyncResult<Void>> resultHandler);
 
     @Fluent
