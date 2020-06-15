@@ -1,8 +1,7 @@
 package com.example.vet;
 
 import com.example.vet.database.VetDatabase;
-import com.example.vet.http.VetHttpServer;
-import com.example.vet.http.VetPasswordEncoder;
+import com.example.vet.worker.VetPasswordEncoder;
 import io.reactivex.Completable;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Launcher;

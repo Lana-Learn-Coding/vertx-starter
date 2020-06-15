@@ -1,6 +1,5 @@
-package com.example.vet.http;
+package com.example.vet;
 
-import com.example.vet.QueueAddresses;
 import com.example.vet.database.VetESService;
 import com.example.vet.validation.UserValidationHandler;
 import io.reactivex.Maybe;

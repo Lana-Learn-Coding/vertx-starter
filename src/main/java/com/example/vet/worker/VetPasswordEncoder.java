@@ -1,4 +1,4 @@
-package com.example.vet.http;
+package com.example.vet.worker;
 
 import com.example.vet.QueueAddresses;
 import io.vertx.reactivex.core.AbstractVerticle;
