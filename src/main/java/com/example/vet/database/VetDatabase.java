@@ -1,6 +1,6 @@
 package com.example.vet.database;
 
-import com.example.vet.QueueAddresses;
+import com.example.vet.config.EventBusConfig;
 import io.vertx.core.Promise;
 import io.vertx.reactivex.core.AbstractVerticle;
 import io.vertx.serviceproxy.ServiceBinder;
@@ -22,7 +22,7 @@ public class VetDatabase extends AbstractVerticle {
                 return;
             }
             ServiceBinder binder = new ServiceBinder(vertx.getDelegate());
-            binder.setAddress(QueueAddresses.VET_DB_QUEUE.address).register(VetESService.class, ready.result());
+            binder.setAddress(EventBusConfig.VET_DB_QUEUE.address).register(VetESService.class, ready.result());
             startPromise.complete();
         });
     }

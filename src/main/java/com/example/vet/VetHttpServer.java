@@ -1,5 +1,6 @@
 package com.example.vet;
 
+import com.example.vet.config.EventBusConfig;
 import com.example.vet.database.VetESService;
 import com.example.vet.validation.UserValidationHandler;
 import io.reactivex.Maybe;
@@ -20,7 +21,7 @@ public class VetHttpServer extends AbstractVerticle {
 
     @Override
     public void start() {
-        dbService = VetESService.createProxy(vertx.getDelegate(), QueueAddresses.VET_DB_QUEUE.address);
+        dbService = VetESService.createProxy(vertx.getDelegate(), EventBusConfig.VET_DB_QUEUE.address);
         final Router router = Router.router(vertx);
         final Handler<RoutingContext> userValidation = new UserValidationHandler();
         // Enable the body parser to we can get the form data and json documents in out context.
@@ -40,7 +41,6 @@ public class VetHttpServer extends AbstractVerticle {
 
         vertx.createHttpServer().requestHandler(router).listen(8000);
     }
-
 
     private void onError(RoutingContext context) {
         Throwable failure = context.failure();
@@ -113,7 +113,7 @@ public class VetHttpServer extends AbstractVerticle {
         }
         DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
         return vertx.eventBus()
-            .rxRequest(QueueAddresses.PASSWORD_ENCODER_QUEUE.address, user.getString(PASSWORD_FIELD), options)
+            .rxRequest(EventBusConfig.PASSWORD_ENCODER_QUEUE.address, user.getString(PASSWORD_FIELD), options)
             .flatMap(hashed -> {
                 user.put(PASSWORD_FIELD, hashed.body());
                 return dbService.rxSave(INDEX, user);

@@ -1,6 +1,6 @@
 package com.example.vet.worker;
 
-import com.example.vet.QueueAddresses;
+import com.example.vet.config.EventBusConfig;
 import io.vertx.reactivex.core.AbstractVerticle;
 import io.vertx.reactivex.core.eventbus.Message;
 
@@ -12,7 +12,7 @@ public class VetPasswordEncoder extends AbstractVerticle {
 
     @Override
     public void start() {
-        vertx.eventBus().consumer(QueueAddresses.PASSWORD_ENCODER_QUEUE.address, this::onMessage);
+        vertx.eventBus().consumer(EventBusConfig.PASSWORD_ENCODER_QUEUE.address, this::onMessage);
     }
 
     private void onMessage(Message<String> message) {
