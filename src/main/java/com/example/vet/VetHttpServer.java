@@ -53,12 +53,8 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void searchUser(RoutingContext context) {
-        int from = Optional.ofNullable(context.request().getParam("from"))
-            .map(Integer::parseInt)
-            .orElse(0);
-        int size = Optional.ofNullable(context.request().getParam("size"))
-            .map(Integer::parseInt)
-            .orElse(10);
+        int from = getParam(context, "from").map(Integer::parseInt).orElse(0);
+        int size = getParam(context,"size").map(Integer::parseInt).orElse(10);
 
         dbService
             .rxFindAllUser(INDEX, context.getBodyAsJson(), from, size)
@@ -69,15 +65,10 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void fetchAllUser(RoutingContext context) {
-        int from = Optional.ofNullable(context.request().getParam("from"))
-            .map(Integer::parseInt)
-            .orElse(0);
-        int size = Optional.ofNullable(context.request().getParam("size"))
-            .map(Integer::parseInt)
-            .orElse(10);
+        int from = getParam(context, "from").map(Integer::parseInt).orElse(0);
+        int size = getParam(context,"size").map(Integer::parseInt).orElse(10);
 
-        VetQueryParser.parseQuery(context.request().getParam("query"));
-        Optional.ofNullable(context.request().getParam("query"))
+        getParam(context,"query")
             .map((query) -> {
                 System.out.println(VetQueryParser.parseQuery(query));
                 return dbService.rxFindAllUser(INDEX, VetQueryParser.parseQuery(query), from, size);
@@ -161,6 +152,10 @@ public class VetHttpServer extends AbstractVerticle {
                     (error) -> context.response().setStatusCode(400).end()
                 );
         });
+    }
+
+    private Optional<String> getParam(RoutingContext context, String param) {
+        return Optional.ofNullable(context.request().getParam(param));
     }
 
     private void responseOk(RoutingContext context, String data) {
