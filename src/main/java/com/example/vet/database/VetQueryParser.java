@@ -18,8 +18,8 @@ import java.util.regex.Pattern;
  */
 public class VetQueryParser {
     private enum Operators {
-        AND(";(?![^\\(]*\\))"),
-        OR(",(?![^\\(]*\\))"),
+        AND(" AND (?![^\\(]*\\))"),
+        OR(" OR (?![^\\(]*\\))"),
         NOT("!(?![^\\(]*\\))"),
         BRACKET("(?<=\\().+?(?=\\))");
 
