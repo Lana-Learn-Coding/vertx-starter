@@ -2,6 +2,7 @@ package com.example.vet;
 
 import com.example.vet.config.EventBusConfig;
 import com.example.vet.database.VetESService;
+import com.example.vet.database.VetQueryParser;
 import com.example.vet.validation.UserValidationHandler;
 import io.reactivex.Maybe;
 import io.reactivex.Single;
@@ -39,7 +40,7 @@ public class VetHttpServer extends AbstractVerticle {
 
         router.errorHandler(500, this::onError);
 
-        vertx.createHttpServer().requestHandler(router).listen(8000);
+        vertx.createHttpServer().requestHandler(router).listen(8800);
     }
 
     private void onError(RoutingContext context) {
@@ -59,12 +60,17 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void fetchAllUser(RoutingContext context) {
-        dbService
-            .rxFetchAllUser(INDEX)
-            .subscribe(
-                listUser -> responseOk(context, listUser.encode()),
-                context::fail
-            );
+        String query = context.request().getParam("query");
+        Single<JsonArray> fetchResult;
+        if (query != null) {
+            fetchResult = dbService.rxFindAllUser(INDEX, VetQueryParser.parseQuery(query));
+        } else {
+            fetchResult = dbService.rxFetchAllUser(INDEX);
+        }
+        fetchResult.subscribe(
+            listUser -> responseOk(context, listUser.encode()),
+            context::fail
+        );
     }
 
     private void fetchUser(RoutingContext context) {
