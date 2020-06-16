@@ -16,6 +16,8 @@ import io.vertx.reactivex.ext.web.Router;
 import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
 
+import java.util.Optional;
+
 public class VetHttpServer extends AbstractVerticle {
     private final String INDEX = "test";
     private com.example.vet.database.reactivex.VetESService dbService;
@@ -51,8 +53,15 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void searchUser(RoutingContext context) {
+        int from = Optional.ofNullable(context.request().getParam("from"))
+            .map(Integer::parseInt)
+            .orElse(0);
+        int size = Optional.ofNullable(context.request().getParam("size"))
+            .map(Integer::parseInt)
+            .orElse(10);
+
         dbService
-            .rxFindAllUser(INDEX, context.getBodyAsJson())
+            .rxFindAllUser(INDEX, context.getBodyAsJson(), from, size)
             .subscribe(
                 listUser -> responseOk(context, listUser.encode()),
                 error -> context.response().setStatusCode(400).end()
@@ -60,17 +69,24 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void fetchAllUser(RoutingContext context) {
-        String query = context.request().getParam("query");
-        Single<JsonArray> fetchResult;
-        if (query != null) {
-            fetchResult = dbService.rxFindAllUser(INDEX, VetQueryParser.parseQuery(query));
-        } else {
-            fetchResult = dbService.rxFetchAllUser(INDEX);
-        }
-        fetchResult.subscribe(
-            listUser -> responseOk(context, listUser.encode()),
-            context::fail
-        );
+        int from = Optional.ofNullable(context.request().getParam("from"))
+            .map(Integer::parseInt)
+            .orElse(0);
+        int size = Optional.ofNullable(context.request().getParam("size"))
+            .map(Integer::parseInt)
+            .orElse(10);
+
+        VetQueryParser.parseQuery(context.request().getParam("query"));
+        Optional.ofNullable(context.request().getParam("query"))
+            .map((query) -> {
+                System.out.println(VetQueryParser.parseQuery(query));
+                return dbService.rxFindAllUser(INDEX, VetQueryParser.parseQuery(query), from, size);
+            })
+            .orElseGet(() -> dbService.rxFetchAllUser(INDEX, from, size))
+            .subscribe(
+                listUser -> responseOk(context, listUser.encode()),
+                context::fail
+            );
     }
 
     private void fetchUser(RoutingContext context) {

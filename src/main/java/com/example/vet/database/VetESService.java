@@ -23,10 +23,10 @@ public interface VetESService {
     }
 
     @Fluent
-    VetESService findAllUser(String index, JsonObject query, Handler<AsyncResult<JsonArray>> resultHandler);
+    VetESService findAllUser(String index, JsonObject query, int from, int size, Handler<AsyncResult<JsonArray>> resultHandler);
 
     @Fluent
-    VetESService fetchAllUser(String index, Handler<AsyncResult<JsonArray>> resultHandler);
+    VetESService fetchAllUser(String index, int from, int size, Handler<AsyncResult<JsonArray>> resultHandler);
 
     @Fluent
     VetESService fetchUser(String index, String id, JsonObject fields, Handler<AsyncResult<@Nullable JsonObject>> resultHandler);
