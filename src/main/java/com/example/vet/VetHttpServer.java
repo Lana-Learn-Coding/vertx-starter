@@ -54,7 +54,7 @@ public class VetHttpServer extends AbstractVerticle {
 
     private void searchUser(RoutingContext context) {
         int from = getParam(context, "from").map(Integer::parseInt).orElse(0);
-        int size = getParam(context,"size").map(Integer::parseInt).orElse(10);
+        int size = getParam(context, "size").map(Integer::parseInt).orElse(10);
 
         dbService
             .rxFindAllUser(INDEX, context.getBodyAsJson(), from, size)
@@ -65,17 +65,17 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void fetchAllUser(RoutingContext context) {
-        int from = getParam(context, "from").map(Integer::parseInt).orElse(0);
-        int size = getParam(context,"size").map(Integer::parseInt).orElse(10);
+        int from = this.getParam(context, "from").map(Integer::parseInt).orElse(0);
+        int size = this.getParam(context, "size").map(Integer::parseInt).orElse(10);
 
-        getParam(context,"query")
+        this.getParam(context, "query")
             .map((query) -> {
                 System.out.println(VetQueryParser.parseQuery(query));
                 return dbService.rxFindAllUser(INDEX, VetQueryParser.parseQuery(query), from, size);
             })
             .orElseGet(() -> dbService.rxFetchAllUser(INDEX, from, size))
             .subscribe(
-                listUser -> responseOk(context, listUser.encode()),
+                listUser -> this.responseOk(context, listUser.encode()),
                 context::fail
             );
     }
@@ -84,9 +84,9 @@ public class VetHttpServer extends AbstractVerticle {
         dbService
             .rxFetchUser(INDEX, context.request().getParam("id"), new JsonObject())
             .subscribe(
-                user -> responseOk(context, user.encode()),
+                user -> this.responseOk(context, user.encode()),
                 context::fail,
-                () -> responseNotFound(context)
+                () -> this.responseNotFound(context)
             );
     }
 
@@ -95,7 +95,7 @@ public class VetHttpServer extends AbstractVerticle {
         // ignore the _id field
         user.remove("_id");
         hashPasswordThenSaveUser(user).subscribe(
-            createdUser -> responseOk(context, createdUser.encode()),
+            createdUser -> this.responseOk(context, createdUser.encode()),
             context::fail
         );
     }
@@ -110,12 +110,12 @@ public class VetHttpServer extends AbstractVerticle {
                 if (userExisted) {
                     return Maybe.empty();
                 }
-                return hashPasswordThenSaveUser(user).toMaybe();
+                return this.hashPasswordThenSaveUser(user).toMaybe();
             })
             .subscribe(
-                updatedUser -> responseOk(context, user.encode()),
+                updatedUser -> this.responseOk(context, user.encode()),
                 context::fail,
-                () -> responseNotFound(context)
+                () -> this.responseNotFound(context)
             );
     }
 

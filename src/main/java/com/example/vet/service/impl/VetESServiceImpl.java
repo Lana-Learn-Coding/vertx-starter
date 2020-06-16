@@ -100,7 +100,7 @@ public class VetESServiceImpl implements VetESService {
                 resultHandler.handle(Future.failedFuture(savedIdResult.cause()));
                 return;
             }
-            fetchUser(index, savedIdResult.result(), new JsonObject(), savedUserResult -> {
+            this.fetchUser(index, savedIdResult.result(), new JsonObject(), savedUserResult -> {
                 if (savedUserResult.failed()) {
                     resultHandler.handle(Future.failedFuture(savedIdResult.cause()));
                     return;
