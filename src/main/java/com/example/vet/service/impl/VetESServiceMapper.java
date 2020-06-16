@@ -1,4 +1,4 @@
-package com.example.vet.database.impl;
+package com.example.vet.service.impl;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;

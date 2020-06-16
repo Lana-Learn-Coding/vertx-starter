@@ -1,6 +1,6 @@
-package com.example.vet.database;
+package com.example.vet.service;
 
-import com.example.vet.database.impl.VetESServiceImpl;
+import com.example.vet.service.impl.VetESServiceImpl;
 import io.vertx.codegen.annotations.*;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -18,8 +18,8 @@ public interface VetESService {
     }
 
     @GenIgnore
-    static com.example.vet.database.reactivex.VetESService createProxy(Vertx vertx, String address) {
-        return new com.example.vet.database.reactivex.VetESService(new VetESServiceVertxEBProxy(vertx, address));
+    static com.example.vet.service.reactivex.VetESService createProxy(Vertx vertx, String address) {
+        return new com.example.vet.service.reactivex.VetESService(new VetESServiceVertxEBProxy(vertx, address));
     }
 
     @Fluent

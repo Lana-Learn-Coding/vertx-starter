@@ -1,6 +1,7 @@
 package com.example.vet.database;
 
 import com.example.vet.config.EventBusConfig;
+import com.example.vet.service.VetESService;
 import io.vertx.core.Promise;
 import io.vertx.reactivex.core.AbstractVerticle;
 import io.vertx.serviceproxy.ServiceBinder;

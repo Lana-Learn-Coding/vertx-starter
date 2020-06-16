@@ -1,6 +1,6 @@
-package com.example.vet.database.impl;
+package com.example.vet.service.impl;
 
-import com.example.vet.database.VetESService;
+import com.example.vet.service.VetESService;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;

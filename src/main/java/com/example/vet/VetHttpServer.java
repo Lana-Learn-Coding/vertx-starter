@@ -1,7 +1,7 @@
 package com.example.vet;
 
 import com.example.vet.config.EventBusConfig;
-import com.example.vet.database.VetESService;
+import com.example.vet.service.VetESService;
 import com.example.vet.database.VetQueryParser;
 import com.example.vet.validation.UserValidationHandler;
 import io.reactivex.Maybe;
@@ -20,7 +20,7 @@ import java.util.Optional;
 
 public class VetHttpServer extends AbstractVerticle {
     private final String INDEX = "test";
-    private com.example.vet.database.reactivex.VetESService dbService;
+    private com.example.vet.service.reactivex.VetESService dbService;
 
     @Override
     public void start() {
