@@ -9,10 +9,11 @@ import java.util.regex.Pattern;
 /**
  * Build a elastic search json query from query param string.
  * <p>
- * Query format
+ * - Query clause format
  * [query_type?]=[field_name]:[query_value]
  * [query_type?]=[field_name].[query_field_name]:[query_value]
- * Default query_type is match
+ * (Default query_type is match)
+ * - Query operators: AND OR !(not)
  * <p>
  * TODO: support string literal and typing
  */
@@ -41,6 +42,13 @@ public class VetQueryParser {
         }
     }
 
+    /**
+     * Parse query string recursive way
+     *
+     * @param rawQuery the query string
+     * @return JsonObject the object that have the same structure with elastic search json query object
+     * @throws RuntimeException when the rawQuery have syntax error
+     */
     public static JsonObject parseQuery(String rawQuery) {
         JsonObject queryTree = new JsonObject();
         boolean isIncludeOR = matchContains(rawQuery, Operators.OR.pattern);
@@ -48,11 +56,13 @@ public class VetQueryParser {
         boolean isIncludeNOT = matchContains(rawQuery, Operators.NOT.pattern);
         boolean isIncludeBracket = matchContains(rawQuery, Operators.BRACKET.pattern);
 
-        // no logic operator left
+        // No logic operator left, do the "real" parse logic which build query type, field name
         if (!isIncludeAND && !isIncludeOR && !isIncludeNOT && !isIncludeBracket) {
             return parseQueryClause(rawQuery);
         }
 
+        // Extract sides expression of operator, then parse each result as normal query string
+        // The results will be put inside bool expression for combining
         if (isIncludeOR) {
             return queryTree.put("bool", parseLogicOr(rawQuery));
         }
@@ -63,7 +73,7 @@ public class VetQueryParser {
             return queryTree.put("bool", parseLogicNot(rawQuery));
         }
 
-        // unwrap bracket
+        // Unwrap bracket, then parse as normal query string
         Pattern pattern = Pattern.compile(Operators.BRACKET.pattern);
         Matcher matcher = pattern.matcher(rawQuery);
         boolean isMatch = matcher.find();
@@ -92,11 +102,11 @@ public class VetQueryParser {
         JsonObject queryClauseTree = new JsonObject();
         // TODO: implement safe parsing
         if (isNestedQuery) {
-            // Unsafe key.subkey:value
+            // Unsafe [field_name].[query_field_name]:[query_value]
             String[] values = rawQuery.split("[.:]");
             queryClauseTree.put(values[0], new JsonObject().put(values[1], values[2]));
         } else {
-            // Unsafe key:value
+            // Unsafe [field_name]:[query_value]
             String[] keyAndValue = rawQuery.split(":");
             queryClauseTree.put(keyAndValue[0], keyAndValue[1]);
         }
@@ -125,14 +135,15 @@ public class VetQueryParser {
 
     private static JsonObject parseLogicNot(String rawQuery) {
         JsonObject subTree = new JsonObject();
-        String[] rawQueries = rawQuery.split(Operators.NOT.pattern);
-        if (rawQueries.length != 2) {
+        rawQuery = rawQuery.trim();
+        if (!rawQuery.startsWith("!")) {
             throw new RuntimeException("Malformed operator: " + rawQuery);
         }
-        return subTree.put("must_not", parseQuery(rawQueries[1]));
+        rawQuery = rawQuery.substring(1);
+        return subTree.put("must_not", parseQuery(rawQuery));
     }
 
-    // match substring
+    // match substring instead of whole string like String.matches behaviour
     private static boolean matchContains(String string, String regex) {
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(string);
