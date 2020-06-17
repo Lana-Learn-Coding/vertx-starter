@@ -38,7 +38,7 @@ public class UserValidationHandler implements Handler<RoutingContext> {
                 String key = iterator.next();
                 Object value = filteredUser.getValue(key);
                 if (value == null) {
-                    filteredUser.remove(key);
+                    iterator.remove();
                 }
             }
 
