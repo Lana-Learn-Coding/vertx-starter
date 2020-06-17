@@ -21,6 +21,7 @@ import java.util.Optional;
 
 public class VetHttpServer extends AbstractVerticle {
     private final String INDEX = "test";
+    private final String TYPE = "user";
     private com.example.vet.service.reactivex.VetESService dbService;
 
     @Override
@@ -124,15 +125,18 @@ public class VetHttpServer extends AbstractVerticle {
 
     private Single<JsonObject> hashPasswordThenSaveUser(JsonObject user) {
         final String PASSWORD_FIELD = "password";
+        JsonObject modification = new JsonObject()
+            .put("modification", user)
+            .put("type", TYPE);
         if (!user.containsKey(PASSWORD_FIELD)) {
-            return dbService.rxSave(INDEX, user);
+            return dbService.rxSave(INDEX, modification);
         }
         DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
         return vertx.eventBus()
             .rxRequest(EventBusConfig.PASSWORD_ENCODER_QUEUE.address, user.getString(PASSWORD_FIELD), options)
             .flatMap(hashed -> {
                 user.put(PASSWORD_FIELD, hashed.body());
-                return dbService.rxSave(INDEX, user);
+                return dbService.rxSave(INDEX, modification);
             });
     }
 

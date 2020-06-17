@@ -111,19 +111,22 @@ public class VetESServiceImpl implements VetESService {
         };
 
         if (modification.containsKey("_id")) {
-            return update(index, modification.getString("_id"), modification, fetchIdHandler);
+            return update(index, modification.getString("type"), modification.getString("_id"),
+                modification.getJsonObject("modification"), fetchIdHandler);
         }
-        return create(index, modification, fetchIdHandler);
+        return create(index, modification.getString("type"), modification, fetchIdHandler);
     }
 
     @Override
     public VetESService bulkCreate(String index, JsonArray modifications, Handler<AsyncResult<Void>> resultHandler) {
         BulkRequestBuilder requestBuilder = client.prepareBulk();
-        modifications.forEach(user -> {
+        modifications.forEach(item -> {
+            JsonObject modification = (JsonObject) item;
             IndexRequestBuilder indexRequestBuilder = client
                 .prepareIndex()
                 .setIndex(index)
-                .setSource(user.toString());
+                .setType(modification.getString("type"))
+                .setSource(modification.getString("modification"));
             requestBuilder.add(indexRequestBuilder);
         });
         requestBuilder.execute(new ActionListener<BulkResponse>() {
@@ -140,10 +143,11 @@ public class VetESServiceImpl implements VetESService {
         return this;
     }
 
-    private VetESService create(String index, JsonObject modification, Handler<AsyncResult<String>> resultHandler) {
+    private VetESService create(String index, String type, JsonObject modification, Handler<AsyncResult<String>> resultHandler) {
         client
             .prepareIndex()
             .setIndex(index)
+            .setType(type)
             .setSource(modification.getMap())
             .execute(new ActionListener<IndexResponse>() {
                 @Override
@@ -159,12 +163,13 @@ public class VetESServiceImpl implements VetESService {
         return this;
     }
 
-    private VetESService update(String index, String id, JsonObject modification, Handler<AsyncResult<String>> resultHandler) {
+    private VetESService update(String index, String type, String id, JsonObject modification, Handler<AsyncResult<String>> resultHandler) {
         modification.remove("_id");
         client
             .prepareUpdate()
             .setIndex(index)
             .setId(id)
+            .setType(type)
             .setDoc(modification.getMap())
             .execute(new ActionListener<UpdateResponse>() {
                 @Override
