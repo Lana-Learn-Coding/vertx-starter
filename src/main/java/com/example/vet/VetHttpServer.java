@@ -1,8 +1,8 @@
 package com.example.vet;
 
 import com.example.vet.config.EventBusConfig;
-import com.example.vet.service.VetESService;
 import com.example.vet.database.VetQueryParser;
+import com.example.vet.service.VetESService;
 import com.example.vet.validation.UserValidationHandler;
 import io.reactivex.Maybe;
 import io.reactivex.Single;
@@ -12,6 +12,7 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.reactivex.core.AbstractVerticle;
+import io.vertx.reactivex.core.http.HttpServerRequest;
 import io.vertx.reactivex.ext.web.Router;
 import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
@@ -30,7 +31,7 @@ public class VetHttpServer extends AbstractVerticle {
         // Enable the body parser to we can get the form data and json documents in out context.
         router.route().handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(true));
 
-        router.get("/users/search").handler(this::searchUser);
+        router.get("/users/_search").handler(this::searchUser);
         router.get("/users").handler(this::fetchAllUser);
         router.get("/users/:id").handler(this::fetchUser);
         router.delete("/users/:id").handler(this::deleteUser);
@@ -53,11 +54,8 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void searchUser(RoutingContext context) {
-        int from = getParam(context, "from").map(Integer::parseInt).orElse(0);
-        int size = getParam(context, "size").map(Integer::parseInt).orElse(10);
-
         dbService
-            .rxFindAllUser(INDEX, context.getBodyAsJson(), from, size)
+            .rxFindAllUser(INDEX, context.getBodyAsJson())
             .subscribe(
                 listUser -> responseOk(context, listUser.encode()),
                 error -> context.response().setStatusCode(400).end()
@@ -65,15 +63,19 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void fetchAllUser(RoutingContext context) {
-        int from = this.getParam(context, "from").map(Integer::parseInt).orElse(0);
-        int size = this.getParam(context, "size").map(Integer::parseInt).orElse(10);
+        HttpServerRequest request = context.request();
+        JsonObject search = new JsonObject();
+        search.put("query", request.getParam("query"));
+        search.put("size", request.getParam("size"));
+        search.put("from", request.getParam("from"));
 
-        this.getParam(context, "query")
+        Optional.ofNullable(search.getString("query"))
             .map((query) -> {
-                System.out.println(VetQueryParser.parseQuery(query));
-                return dbService.rxFindAllUser(INDEX, VetQueryParser.parseQuery(query), from, size);
-            })
-            .orElseGet(() -> dbService.rxFetchAllUser(INDEX, from, size))
+                    search.put("query", VetQueryParser.parseQuery(search.getString("query")));
+                    return dbService.rxFindAllUser(INDEX, search);
+                }
+            )
+            .orElseGet(() -> dbService.rxFetchAllUser(INDEX, search))
             .subscribe(
                 listUser -> this.responseOk(context, listUser.encode()),
                 context::fail
@@ -81,8 +83,9 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void fetchUser(RoutingContext context) {
+        String userId = context.request().getParam("id");
         dbService
-            .rxFetchUser(INDEX, context.request().getParam("id"), new JsonObject())
+            .rxFetchUser(INDEX, userId)
             .subscribe(
                 user -> this.responseOk(context, user.encode()),
                 context::fail,
@@ -152,10 +155,6 @@ public class VetHttpServer extends AbstractVerticle {
                     (error) -> context.response().setStatusCode(400).end()
                 );
         });
-    }
-
-    private Optional<String> getParam(RoutingContext context, String param) {
-        return Optional.ofNullable(context.request().getParam(param));
     }
 
     private void responseOk(RoutingContext context, String data) {

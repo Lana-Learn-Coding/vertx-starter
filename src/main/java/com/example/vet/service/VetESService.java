@@ -23,19 +23,19 @@ public interface VetESService {
     }
 
     @Fluent
-    VetESService findAllUser(String index, JsonObject query, int from, int size, Handler<AsyncResult<JsonArray>> resultHandler);
+    VetESService findAllUser(String index, JsonObject search, Handler<AsyncResult<JsonArray>> resultHandler);
 
     @Fluent
-    VetESService fetchAllUser(String index, int from, int size, Handler<AsyncResult<JsonArray>> resultHandler);
+    VetESService fetchAllUser(String index, JsonObject search, Handler<AsyncResult<JsonArray>> resultHandler);
 
     @Fluent
-    VetESService fetchUser(String index, String id, JsonObject fields, Handler<AsyncResult<@Nullable JsonObject>> resultHandler);
+    VetESService fetchUser(String index, String id, Handler<AsyncResult<@Nullable JsonObject>> resultHandler);
 
     @Fluent
-    VetESService save(String index, JsonObject user, Handler<AsyncResult<JsonObject>> resultHandler);
+    VetESService save(String index, JsonObject modification, Handler<AsyncResult<JsonObject>> resultHandler);
 
     @Fluent
-    VetESService bulkCreate(String index, JsonArray users, Handler<AsyncResult<Void>> resultHandler);
+    VetESService bulkCreate(String index, JsonArray modifications, Handler<AsyncResult<Void>> resultHandler);
 
     @Fluent
     VetESService deleteUser(String index, String id, Handler<AsyncResult<Void>> resultHandler);

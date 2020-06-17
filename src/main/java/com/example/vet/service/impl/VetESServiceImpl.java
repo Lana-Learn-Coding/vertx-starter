@@ -19,6 +19,8 @@ import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.index.query.QueryBuilders;
 
+import java.util.Optional;
+
 public class VetESServiceImpl implements VetESService {
     private final TransportClient client;
 
@@ -28,10 +30,30 @@ public class VetESServiceImpl implements VetESService {
     }
 
     @Override
-    public VetESService findAllUser(String index, JsonObject query, int from, int size, Handler<AsyncResult<JsonArray>> resultHandler) {
+    public VetESService findAllUser(String index, JsonObject search, Handler<AsyncResult<JsonArray>> resultHandler) {
+        JsonObject query = Optional.ofNullable(search.getJsonObject("query")).orElseGet(JsonObject::new);
+        int from = Optional.ofNullable(search.getInteger("from")).orElse(0);
+        int size = Optional.ofNullable(search.getInteger("size")).orElse(20);
+        return findAllUser(index, query, from, size, resultHandler);
+    }
+
+    @Override
+    public VetESService fetchAllUser(String index, JsonObject option, Handler<AsyncResult<JsonArray>> resultHandler) {
+        option.remove("query");
+        return this.findAllUser(index, option, resultHandler);
+    }
+
+    private VetESService findAllUser(String index, JsonObject query, int from, int size, Handler<AsyncResult<JsonArray>> resultHandler) {
+        String queryString;
+        if (query == null || query.size() == 0) {
+            queryString = QueryBuilders.matchAllQuery().toString();
+        } else {
+            queryString = new JsonObject().put("query", query).toString();
+        }
+
         client
             .prepareSearch(index)
-            .setQuery(new JsonObject().put("query", query).toString())
+            .setQuery(queryString)
             .setFrom(from)
             .setSize(size)
             .execute(new ActionListener<SearchResponse>() {
@@ -49,28 +71,7 @@ public class VetESServiceImpl implements VetESService {
     }
 
     @Override
-    public VetESService fetchAllUser(String index, int from, int size, Handler<AsyncResult<JsonArray>> resultHandler) {
-        client
-            .prepareSearch(index)
-            .setQuery(QueryBuilders.matchAllQuery())
-            .setFrom(from)
-            .setSize(size)
-            .execute(new ActionListener<SearchResponse>() {
-                @Override
-                public void onResponse(SearchResponse searchResponse) {
-                    resultHandler.handle(Future.succeededFuture(VetESServiceMapper.mapToJsonArray(searchResponse)));
-                }
-
-                @Override
-                public void onFailure(Throwable e) {
-                    resultHandler.handle(Future.failedFuture(e));
-                }
-            });
-        return this;
-    }
-
-    @Override
-    public VetESService fetchUser(String index, String id, JsonObject fields, Handler<AsyncResult<JsonObject>> resultHandler) {
+    public VetESService fetchUser(String index, String id, Handler<AsyncResult<JsonObject>> resultHandler) {
         client
             .prepareGet()
             .setIndex(index)
@@ -94,13 +95,13 @@ public class VetESServiceImpl implements VetESService {
     }
 
     @Override
-    public VetESService save(String index, JsonObject user, Handler<AsyncResult<JsonObject>> resultHandler) {
+    public VetESService save(String index, JsonObject modification, Handler<AsyncResult<JsonObject>> resultHandler) {
         Handler<AsyncResult<String>> fetchIdHandler = savedIdResult -> {
             if (savedIdResult.failed()) {
                 resultHandler.handle(Future.failedFuture(savedIdResult.cause()));
                 return;
             }
-            this.fetchUser(index, savedIdResult.result(), new JsonObject(), savedUserResult -> {
+            this.fetchUser(index, savedIdResult.result(), savedUserResult -> {
                 if (savedUserResult.failed()) {
                     resultHandler.handle(Future.failedFuture(savedIdResult.cause()));
                     return;
@@ -109,16 +110,16 @@ public class VetESServiceImpl implements VetESService {
             });
         };
 
-        if (user.containsKey("_id")) {
-            return update(index, user.getString("_id"), user, fetchIdHandler);
+        if (modification.containsKey("_id")) {
+            return update(index, modification.getString("_id"), modification, fetchIdHandler);
         }
-        return create(index, user, fetchIdHandler);
+        return create(index, modification, fetchIdHandler);
     }
 
     @Override
-    public VetESService bulkCreate(String index, JsonArray users, Handler<AsyncResult<Void>> resultHandler) {
+    public VetESService bulkCreate(String index, JsonArray modifications, Handler<AsyncResult<Void>> resultHandler) {
         BulkRequestBuilder requestBuilder = client.prepareBulk();
-        users.forEach(user -> {
+        modifications.forEach(user -> {
             IndexRequestBuilder indexRequestBuilder = client
                 .prepareIndex()
                 .setIndex(index)
@@ -139,11 +140,11 @@ public class VetESServiceImpl implements VetESService {
         return this;
     }
 
-    private VetESService create(String index, JsonObject user, Handler<AsyncResult<String>> resultHandler) {
+    private VetESService create(String index, JsonObject modification, Handler<AsyncResult<String>> resultHandler) {
         client
             .prepareIndex()
             .setIndex(index)
-            .setSource(user.getMap())
+            .setSource(modification.getMap())
             .execute(new ActionListener<IndexResponse>() {
                 @Override
                 public void onResponse(IndexResponse indexResponse) {
@@ -158,13 +159,13 @@ public class VetESServiceImpl implements VetESService {
         return this;
     }
 
-    private VetESService update(String index, String id, JsonObject user, Handler<AsyncResult<String>> resultHandler) {
-        user.remove("_id");
+    private VetESService update(String index, String id, JsonObject modification, Handler<AsyncResult<String>> resultHandler) {
+        modification.remove("_id");
         client
             .prepareUpdate()
             .setIndex(index)
             .setId(id)
-            .setDoc(user.getMap())
+            .setDoc(modification.getMap())
             .execute(new ActionListener<UpdateResponse>() {
                 @Override
                 public void onResponse(UpdateResponse updateResponse) {
