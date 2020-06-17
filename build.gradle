@@ -52,5 +52,6 @@ dependencies {
     compileOnly "org.projectlombok:lombok:1.18.12"
     annotationProcessor "org.projectlombok:lombok:1.18.12"
 
+    testCompile "io.vertx:vertx-unit:${vertxVersion}"
     testCompile "junit:junit:4.12"
 }
