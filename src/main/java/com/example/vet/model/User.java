@@ -1,5 +1,6 @@
 package com.example.vet.model;
 
+import com.example.vet.validation.Password;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,6 +32,9 @@ public class User {
 
     @Email(message = "Invalid email")
     private String email;
+
+    @Password
+    private String password;
 
     @Pattern(regexp = "^0[0-9]{6,14}$")
     private String phone;
