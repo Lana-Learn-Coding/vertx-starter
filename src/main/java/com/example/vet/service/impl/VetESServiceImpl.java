@@ -120,10 +120,11 @@ public class VetESServiceImpl implements VetESService {
             });
         };
 
-        if (modification.containsKey("_id")) {
-            return update(index, type, modification.getString("_id"), modification.getJsonObject("modification"), fetchIdHandler);
+        JsonObject user = modification.getJsonObject("modification");
+        if (user.containsKey("_id")) {
+            return update(index, type, user.getString("_id"), user, fetchIdHandler);
         }
-        return create(index, type, modification.getJsonObject("modification"), fetchIdHandler);
+        return create(index, type, user, fetchIdHandler);
     }
 
     @Override
