@@ -119,7 +119,7 @@ public class VetESServiceImpl implements VetESService {
             return update(index, modification.getString("type"), modification.getString("_id"),
                 modification.getJsonObject("modification"), fetchIdHandler);
         }
-        return create(index, modification.getString("type"), modification, fetchIdHandler);
+        return create(index, modification.getString("type"), modification.getJsonObject("modification"), fetchIdHandler);
     }
 
     @Override
