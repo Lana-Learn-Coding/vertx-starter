@@ -17,8 +17,6 @@ import io.vertx.reactivex.ext.web.Router;
 import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
 
-import java.util.Optional;
-
 public class VetHttpServer extends AbstractVerticle {
     private final String INDEX = "test";
     private final String TYPE = "user";
@@ -32,7 +30,6 @@ public class VetHttpServer extends AbstractVerticle {
         // Enable the body parser to we can get the form data and json documents in out context.
         router.route().handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(true));
 
-        router.get("/users/_search").handler(this::searchUser);
         router.get("/users").handler(this::fetchAllUser);
         router.get("/users/:id").handler(this::fetchUser);
         router.delete("/users/:id").handler(this::deleteUser);
@@ -54,29 +51,16 @@ public class VetHttpServer extends AbstractVerticle {
         }
     }
 
-    private void searchUser(RoutingContext context) {
-        dbService
-            .rxFindAllUser(INDEX, context.getBodyAsJson())
-            .subscribe(
-                listUser -> responseOk(context, listUser.encode()),
-                error -> context.response().setStatusCode(400).end()
-            );
-    }
-
     private void fetchAllUser(RoutingContext context) {
         HttpServerRequest request = context.request();
-        JsonObject search = new JsonObject();
+        JsonObject search = this.setIndexAndType(new JsonObject());
         search.put("query", request.getParam("query"));
         search.put("size", request.getParam("size"));
         search.put("from", request.getParam("from"));
+        search.put("query", VetQueryParser.parseQuery(search.getString("query")));
 
-        Optional.ofNullable(search.getString("query"))
-            .map((query) -> {
-                    search.put("query", VetQueryParser.parseQuery(search.getString("query")));
-                    return dbService.rxFindAllUser(INDEX, search);
-                }
-            )
-            .orElseGet(() -> dbService.rxFetchAllUser(INDEX, search))
+        dbService
+            .rxFindAllUser(search)
             .subscribe(
                 listUser -> this.responseOk(context, listUser.encode()),
                 context::fail
@@ -84,14 +68,12 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void fetchUser(RoutingContext context) {
-        JsonObject identify = new JsonObject()
-            .put("id", context.request().getParam("id"))
-            .put("type", TYPE);
+        JsonObject identify = this.setIndexAndType(new JsonObject())
+            .put("id", context.request().getParam("id"));
         dbService
-            .rxFetchUser(INDEX, identify)
+            .rxFetchUser(identify)
             .subscribe(
-                user -> this.responseOk(context, user.encode()),
-                context::fail,
+                user -> this.responseOk(context, user.encode()), context::fail,
                 () -> this.responseNotFound(context)
             );
     }
@@ -109,12 +91,11 @@ public class VetHttpServer extends AbstractVerticle {
     private void updateUser(RoutingContext context) {
         final JsonObject user = context.getBodyAsJson();
         final String id = context.request().getParam("id");
+        final JsonObject identify = this.setIndexAndType(new JsonObject()).put("id", id);
         user.put("_id", id);
-        final JsonObject identify = new JsonObject()
-            .put("id", id)
-            .put("type", TYPE);
+
         dbService
-            .rxIsUserExist(INDEX, identify)
+            .rxIsUserExist(identify)
             .flatMapMaybe(userExisted -> {
                 if (userExisted) {
                     return Maybe.empty();
@@ -130,9 +111,7 @@ public class VetHttpServer extends AbstractVerticle {
 
     private Single<JsonObject> hashPasswordThenSaveUser(JsonObject user) {
         final String PASSWORD_FIELD = "password";
-        JsonObject modification = new JsonObject()
-            .put("modification", user)
-            .put("type", TYPE);
+        JsonObject modification = this.setIndexAndType(new JsonObject()).put("modification", user);
         if (!user.containsKey(PASSWORD_FIELD)) {
             return dbService.rxSave(INDEX, modification);
         }
@@ -146,11 +125,10 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void deleteUser(RoutingContext context) {
-        JsonObject identify = new JsonObject()
-            .put("id", context.request().getParam("id"))
-            .put("type", TYPE);
+        JsonObject identify = this.setIndexAndType(new JsonObject())
+            .put("id", context.request().getParam("id"));
         dbService
-            .rxDeleteUser(INDEX, identify)
+            .rxDeleteUser(identify)
             .subscribe(
                 () -> context.response().setStatusCode(204).end(),
                 context::fail
@@ -167,6 +145,12 @@ public class VetHttpServer extends AbstractVerticle {
                     (error) -> context.response().setStatusCode(400).end()
                 );
         });
+    }
+
+    private JsonObject setIndexAndType(JsonObject object) {
+        return object
+            .put("type", TYPE)
+            .put("index", INDEX);
     }
 
     private void responseOk(RoutingContext context, String data) {

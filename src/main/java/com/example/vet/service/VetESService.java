@@ -23,13 +23,13 @@ public interface VetESService {
     }
 
     @Fluent
-    VetESService findAllUser(String index, JsonObject search, Handler<AsyncResult<JsonArray>> resultHandler);
+    VetESService findAllUser(JsonObject search, Handler<AsyncResult<JsonArray>> resultHandler);
 
     @Fluent
-    VetESService fetchAllUser(String index, JsonObject search, Handler<AsyncResult<JsonArray>> resultHandler);
+    VetESService fetchAllUser(JsonObject search, Handler<AsyncResult<JsonArray>> resultHandler);
 
     @Fluent
-    VetESService fetchUser(String index, JsonObject identify, Handler<AsyncResult<@Nullable JsonObject>> resultHandler);
+    VetESService fetchUser(JsonObject identify, Handler<AsyncResult<@Nullable JsonObject>> resultHandler);
 
     @Fluent
     VetESService save(String index, JsonObject modification, Handler<AsyncResult<JsonObject>> resultHandler);
@@ -38,8 +38,8 @@ public interface VetESService {
     VetESService bulkCreate(String index, JsonArray modifications, Handler<AsyncResult<Void>> resultHandler);
 
     @Fluent
-    VetESService deleteUser(String index, JsonObject identify, Handler<AsyncResult<Void>> resultHandler);
+    VetESService deleteUser(JsonObject identify, Handler<AsyncResult<Void>> resultHandler);
 
     @Fluent
-    VetESService isUserExist(String index, JsonObject identify, Handler<AsyncResult<Boolean>> resultHandler);
+    VetESService isUserExist(JsonObject identify, Handler<AsyncResult<Boolean>> resultHandler);
 }

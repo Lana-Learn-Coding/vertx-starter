@@ -30,17 +30,18 @@ public class VetESServiceImpl implements VetESService {
     }
 
     @Override
-    public VetESService findAllUser(String index, JsonObject search, Handler<AsyncResult<JsonArray>> resultHandler) {
+    public VetESService findAllUser(JsonObject search, Handler<AsyncResult<JsonArray>> resultHandler) {
         JsonObject query = Optional.ofNullable(search.getJsonObject("query")).orElseGet(JsonObject::new);
         int from = Optional.ofNullable(search.getInteger("from")).orElse(0);
         int size = Optional.ofNullable(search.getInteger("size")).orElse(20);
+        String index = search.getString("index");
         return findAllUser(index, query, from, size, resultHandler);
     }
 
     @Override
-    public VetESService fetchAllUser(String index, JsonObject option, Handler<AsyncResult<JsonArray>> resultHandler) {
+    public VetESService fetchAllUser(JsonObject option, Handler<AsyncResult<JsonArray>> resultHandler) {
         option.remove("query");
-        return this.findAllUser(index, option, resultHandler);
+        return this.findAllUser(option, resultHandler);
     }
 
     private VetESService findAllUser(String index, JsonObject query, int from, int size, Handler<AsyncResult<JsonArray>> resultHandler) {
@@ -71,8 +72,8 @@ public class VetESServiceImpl implements VetESService {
     }
 
     @Override
-    public VetESService fetchUser(String index, JsonObject identify, Handler<AsyncResult<JsonObject>> resultHandler) {
-        return this.fetchUser(index, identify.getString("type"), identify.getString("id"), resultHandler);
+    public VetESService fetchUser(JsonObject identify, Handler<AsyncResult<JsonObject>> resultHandler) {
+        return this.fetchUser(identify.getString("index"), identify.getString("type"), identify.getString("id"), resultHandler);
     }
 
     private VetESService fetchUser(String index, String type, String id, Handler<AsyncResult<JsonObject>> resultHandler) {
@@ -191,8 +192,8 @@ public class VetESServiceImpl implements VetESService {
     }
 
     @Override
-    public VetESService deleteUser(String index, JsonObject identify, Handler<AsyncResult<Void>> resultHandler) {
-        return this.deleteUser(index, identify.getString("type"), identify.getString("id"), resultHandler);
+    public VetESService deleteUser(JsonObject identify, Handler<AsyncResult<Void>> resultHandler) {
+        return this.deleteUser(identify.getString("index"), identify.getString("type"), identify.getString("id"), resultHandler);
     }
 
     private VetESService deleteUser(String index, String type, String id, Handler<AsyncResult<Void>> resultHandler) {
@@ -216,8 +217,8 @@ public class VetESServiceImpl implements VetESService {
     }
 
     @Override
-    public VetESService isUserExist(String index, JsonObject identify, Handler<AsyncResult<Boolean>> resultHandler) {
-        return this.isUserExist(index, identify.getString("type"), identify.getString("id"), resultHandler);
+    public VetESService isUserExist(JsonObject identify, Handler<AsyncResult<Boolean>> resultHandler) {
+        return this.isUserExist(identify.getString("index"), identify.getString("type"), identify.getString("id"), resultHandler);
     }
 
     private VetESService isUserExist(String index, String type, String id, Handler<AsyncResult<Boolean>> resultHandler) {
