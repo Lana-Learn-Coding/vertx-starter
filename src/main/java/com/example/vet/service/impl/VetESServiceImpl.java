@@ -86,7 +86,9 @@ public class VetESServiceImpl implements VetESService {
                 @Override
                 public void onResponse(GetResponse getFields) {
                     if (getFields.isExists()) {
-                        resultHandler.handle(Future.succeededFuture(new JsonObject(getFields.getSourceAsMap())));
+                        JsonObject user = new JsonObject(getFields.getSourceAsMap());
+                        user.put("_id", id);
+                        resultHandler.handle(Future.succeededFuture(user));
                         return;
                     }
                     resultHandler.handle(Future.succeededFuture());
