@@ -32,10 +32,10 @@ public interface VetESService {
     VetESService fetchUser(JsonObject identify, Handler<AsyncResult<@Nullable JsonObject>> resultHandler);
 
     @Fluent
-    VetESService save(String index, JsonObject modification, Handler<AsyncResult<JsonObject>> resultHandler);
+    VetESService save(JsonObject modification, Handler<AsyncResult<JsonObject>> resultHandler);
 
     @Fluent
-    VetESService bulkCreate(String index, JsonArray modifications, Handler<AsyncResult<Void>> resultHandler);
+    VetESService bulkCreate(JsonObject modification, Handler<AsyncResult<Void>> resultHandler);
 
     @Fluent
     VetESService deleteUser(JsonObject identify, Handler<AsyncResult<Void>> resultHandler);

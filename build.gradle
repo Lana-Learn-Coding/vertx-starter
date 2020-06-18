@@ -1,6 +1,7 @@
 plugins {
     id "java"
     id "idea"
+    id "com.github.mtatheonly.quasar-gradle-plugin" version "0.0.1"
 }
 
 ext {
@@ -42,6 +43,9 @@ dependencies {
 
     compile "org.elasticsearch:elasticsearch:2.4.0"
 
+    compile "io.vertx:vertx-sync:${vertxVersion}"
+    compile "co.paralleluniverse:quasar-core:0.7.10:jdk8"
+
     // javax validation
     compile "javax.validation:validation-api:2.0.1.Final"
     compile "org.hibernate:hibernate-validator:${validatorVersion}"
@@ -58,3 +62,5 @@ dependencies {
     testCompile "au.com.dius:pact-jvm-consumer-junit:${pactVersion}"
     testCompile "junit:junit:4.12"
 }
+
+compileJava.finalizedBy(quasarInstrumentation)

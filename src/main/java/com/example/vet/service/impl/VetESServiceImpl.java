@@ -101,13 +101,15 @@ public class VetESServiceImpl implements VetESService {
     }
 
     @Override
-    public VetESService save(String index, JsonObject modification, Handler<AsyncResult<JsonObject>> resultHandler) {
+    public VetESService save(JsonObject modification, Handler<AsyncResult<JsonObject>> resultHandler) {
+        final String index = modification.getString("index");
+        final String type = modification.getString("type");
         Handler<AsyncResult<String>> fetchIdHandler = savedIdResult -> {
             if (savedIdResult.failed()) {
                 resultHandler.handle(Future.failedFuture(savedIdResult.cause()));
                 return;
             }
-            this.fetchUser(index, modification.getString("type"), savedIdResult.result(), savedUserResult -> {
+            this.fetchUser(index, type, savedIdResult.result(), savedUserResult -> {
                 if (savedUserResult.failed()) {
                     resultHandler.handle(Future.failedFuture(savedIdResult.cause()));
                     return;
@@ -117,22 +119,21 @@ public class VetESServiceImpl implements VetESService {
         };
 
         if (modification.containsKey("_id")) {
-            return update(index, modification.getString("type"), modification.getString("_id"),
-                modification.getJsonObject("modification"), fetchIdHandler);
+            return update(index, type, modification.getString("_id"), modification.getJsonObject("modification"), fetchIdHandler);
         }
-        return create(index, modification.getString("type"), modification.getJsonObject("modification"), fetchIdHandler);
+        return create(index, type, modification.getJsonObject("modification"), fetchIdHandler);
     }
 
     @Override
-    public VetESService bulkCreate(String index, JsonArray modifications, Handler<AsyncResult<Void>> resultHandler) {
+    public VetESService bulkCreate(JsonObject modification, Handler<AsyncResult<Void>> resultHandler) {
         BulkRequestBuilder requestBuilder = client.prepareBulk();
+        JsonArray modifications = modification.getJsonArray("modification");
         modifications.forEach(item -> {
-            JsonObject modification = (JsonObject) item;
             IndexRequestBuilder indexRequestBuilder = client
                 .prepareIndex()
-                .setIndex(index)
+                .setIndex(modification.getString("index"))
                 .setType(modification.getString("type"))
-                .setSource(modification.getString("modification"));
+                .setSource(item.toString());
             requestBuilder.add(indexRequestBuilder);
         });
         requestBuilder.execute(new ActionListener<BulkResponse>() {

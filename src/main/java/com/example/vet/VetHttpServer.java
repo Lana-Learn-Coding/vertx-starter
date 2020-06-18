@@ -113,14 +113,14 @@ public class VetHttpServer extends AbstractVerticle {
         final String PASSWORD_FIELD = "password";
         JsonObject modification = this.setIndexAndType(new JsonObject()).put("modification", user);
         if (!user.containsKey(PASSWORD_FIELD)) {
-            return dbService.rxSave(INDEX, modification);
+            return dbService.rxSave(modification);
         }
         DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
         return vertx.eventBus()
             .rxRequest(EventBusConfig.PASSWORD_ENCODER_QUEUE.address, user.getString(PASSWORD_FIELD), options)
             .flatMap(hashed -> {
                 user.put(PASSWORD_FIELD, hashed.body());
-                return dbService.rxSave(INDEX, modification);
+                return dbService.rxSave(modification);
             });
     }
 
@@ -139,7 +139,11 @@ public class VetHttpServer extends AbstractVerticle {
         context.fileUploads().forEach(fileUpload -> {
             vertx.fileSystem()
                 .rxReadFile(fileUpload.uploadedFileName())
-                .flatMapCompletable(buffer -> dbService.rxBulkCreate(INDEX, new JsonArray(buffer.getDelegate())))
+                .flatMapCompletable(buffer -> {
+                    JsonObject modification = this.setIndexAndType(new JsonObject())
+                        .put("modification", new JsonArray(buffer.getDelegate()));
+                    return dbService.rxBulkCreate(modification);
+                })
                 .subscribe(
                     () -> context.response().setStatusCode(201).end(),
                     (error) -> context.response().setStatusCode(400).end()
