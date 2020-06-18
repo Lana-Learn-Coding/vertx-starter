@@ -6,6 +6,7 @@ plugins {
 ext {
     vertxVersion = "3.9.1"
     validatorVersion = "6.1.5.Final"
+    pactVersion = "4.0.10"
 }
 
 group = "org.example"
@@ -48,12 +49,12 @@ dependencies {
     compile group: 'org.glassfish', name: 'javax.el', version: '3.0.0'
     annotationProcessor "org.hibernate:hibernate-validator-annotation-processor:${validatorVersion}"
 
-
     compileOnly "org.projectlombok:lombok:1.18.12"
     annotationProcessor "org.projectlombok:lombok:1.18.12"
 
-    testCompile "au.com.dius:pact-jvm-provider-junit:4.0.10"
     testCompile "io.vertx:vertx-unit:${vertxVersion}"
-    testCompile group: 'au.com.dius', name: 'pact-jvm-consumer-junit', version: '4.0.10'
+    testCompile "com.konghq:unirest-java:3.7.03"
+    testCompile "au.com.dius:pact-jvm-provider-junit:${pactVersion}"
+    testCompile "au.com.dius:pact-jvm-consumer-junit:${pactVersion}"
     testCompile "junit:junit:4.12"
 }
