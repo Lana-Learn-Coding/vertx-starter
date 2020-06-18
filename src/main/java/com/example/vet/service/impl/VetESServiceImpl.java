@@ -103,31 +103,6 @@ public class VetESServiceImpl implements VetESService {
     }
 
     @Override
-    public VetESService save(JsonObject modification, Handler<AsyncResult<JsonObject>> resultHandler) {
-        final String index = modification.getString("index");
-        final String type = modification.getString("type");
-        Handler<AsyncResult<String>> fetchIdHandler = savedIdResult -> {
-            if (savedIdResult.failed()) {
-                resultHandler.handle(Future.failedFuture(savedIdResult.cause()));
-                return;
-            }
-            this.fetchUser(index, type, savedIdResult.result(), savedUserResult -> {
-                if (savedUserResult.failed()) {
-                    resultHandler.handle(Future.failedFuture(savedIdResult.cause()));
-                    return;
-                }
-                resultHandler.handle(Future.succeededFuture(savedUserResult.result()));
-            });
-        };
-
-        JsonObject user = modification.getJsonObject("modification");
-        if (user.containsKey("_id")) {
-            return update(index, type, user.getString("_id"), user, fetchIdHandler);
-        }
-        return create(index, type, user, fetchIdHandler);
-    }
-
-    @Override
     public VetESService bulkCreate(JsonObject modification, Handler<AsyncResult<Void>> resultHandler) {
         BulkRequestBuilder requestBuilder = client.prepareBulk();
         JsonArray modifications = modification.getJsonArray("modification");
@@ -153,12 +128,37 @@ public class VetESServiceImpl implements VetESService {
         return this;
     }
 
-    private VetESService create(String index, String type, JsonObject modification, Handler<AsyncResult<String>> resultHandler) {
+    @Override
+    public VetESService save(JsonObject modification, Handler<AsyncResult<JsonObject>> resultHandler) {
+        final String index = modification.getString("index");
+        final String type = modification.getString("type");
+        Handler<AsyncResult<String>> fetchIdHandler = savedIdResult -> {
+            if (savedIdResult.failed()) {
+                resultHandler.handle(Future.failedFuture(savedIdResult.cause()));
+                return;
+            }
+            this.fetchUser(index, type, savedIdResult.result(), savedUserResult -> {
+                if (savedUserResult.failed()) {
+                    resultHandler.handle(Future.failedFuture(savedIdResult.cause()));
+                    return;
+                }
+                resultHandler.handle(Future.succeededFuture(savedUserResult.result()));
+            });
+        };
+
+        JsonObject user = modification.getJsonObject("modification");
+        if (user.containsKey("_id")) {
+            return update(index, type, user.getString("_id"), user, fetchIdHandler);
+        }
+        return create(index, type, user, fetchIdHandler);
+    }
+
+    private VetESService create(String index, String type, JsonObject user, Handler<AsyncResult<String>> resultHandler) {
         client
             .prepareIndex()
             .setIndex(index)
             .setType(type)
-            .setSource(modification.getMap())
+            .setSource(user.getMap())
             .execute(new ActionListener<IndexResponse>() {
                 @Override
                 public void onResponse(IndexResponse indexResponse) {
@@ -173,14 +173,14 @@ public class VetESServiceImpl implements VetESService {
         return this;
     }
 
-    private VetESService update(String index, String type, String id, JsonObject modification, Handler<AsyncResult<String>> resultHandler) {
-        modification.remove("_id");
+    private VetESService update(String index, String type, String id, JsonObject user, Handler<AsyncResult<String>> resultHandler) {
+        user.remove("_id");
         client
             .prepareUpdate()
             .setIndex(index)
             .setId(id)
             .setType(type)
-            .setDoc(modification.getMap())
+            .setDoc(user.getMap())
             .execute(new ActionListener<UpdateResponse>() {
                 @Override
                 public void onResponse(UpdateResponse updateResponse) {
