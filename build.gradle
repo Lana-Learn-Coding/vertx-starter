@@ -52,6 +52,8 @@ dependencies {
     compileOnly "org.projectlombok:lombok:1.18.12"
     annotationProcessor "org.projectlombok:lombok:1.18.12"
 
+    testCompile "au.com.dius:pact-jvm-provider-junit:4.0.10"
     testCompile "io.vertx:vertx-unit:${vertxVersion}"
+    testCompile group: 'au.com.dius', name: 'pact-jvm-consumer-junit', version: '4.0.10'
     testCompile "junit:junit:4.12"
 }

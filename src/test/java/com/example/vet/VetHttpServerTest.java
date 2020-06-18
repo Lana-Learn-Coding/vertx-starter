@@ -34,7 +34,7 @@ public class VetHttpServerTest {
     }
 
     @Test
-    public void FetchAllUser_ShouldReturnOK(TestContext context) {
+    public void fetchAllUser_returnOK(TestContext context) {
         Async async = context.async();
         vertx.createHttpClient()
             .get(port, "localhost", "/users")
@@ -46,7 +46,7 @@ public class VetHttpServerTest {
     }
 
     @Test
-    public void CreateUser_WithInvalidData_ShouldReturn400(TestContext context) {
+    public void createUser_invalidData_return400(TestContext context) {
         Async async = context.async();
         User user = new User();
         vertx.createHttpClient()
@@ -62,7 +62,7 @@ public class VetHttpServerTest {
     }
 
     @Test
-    public void CreateUser_ValidData_ShouldReturnOk(TestContext context) {
+    public void createUser_validData_returnOk(TestContext context) {
         Async async = context.async();
         User user = new User();
         user.setName("Test Name");
@@ -88,7 +88,7 @@ public class VetHttpServerTest {
     }
 
     @Test
-    public void DeleteUser_ShouldReturnOk(TestContext context) {
+    public void deleteUser_shouldReturnOk(TestContext context) {
         Async async = context.async();
         HttpClient client = vertx.createHttpClient();
         client
