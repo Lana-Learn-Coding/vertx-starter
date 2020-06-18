@@ -104,7 +104,7 @@ public class VetHttpServerTest {
                     client
                         .delete(port, "localhost", "/users/" + item.getString("_id"))
                         .handler(delResponse -> {
-                            context.assertEquals(200, delResponse.statusCode());
+                            context.assertEquals(204, delResponse.statusCode());
                             async.complete();
                         })
                         .end();
