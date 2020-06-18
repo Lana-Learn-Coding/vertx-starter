@@ -84,9 +84,11 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void fetchUser(RoutingContext context) {
-        String userId = context.request().getParam("id");
+        JsonObject identify = new JsonObject()
+            .put("id", context.request().getParam("id"))
+            .put("type", TYPE);
         dbService
-            .rxFetchUser(INDEX, userId)
+            .rxFetchUser(INDEX, identify)
             .subscribe(
                 user -> this.responseOk(context, user.encode()),
                 context::fail,
@@ -108,8 +110,11 @@ public class VetHttpServer extends AbstractVerticle {
         final JsonObject user = context.getBodyAsJson();
         final String id = context.request().getParam("id");
         user.put("_id", id);
+        final JsonObject identify = new JsonObject()
+            .put("id", id)
+            .put("type", TYPE);
         dbService
-            .rxIsUserExist(INDEX, id)
+            .rxIsUserExist(INDEX, identify)
             .flatMapMaybe(userExisted -> {
                 if (userExisted) {
                     return Maybe.empty();
@@ -141,8 +146,11 @@ public class VetHttpServer extends AbstractVerticle {
     }
 
     private void deleteUser(RoutingContext context) {
+        JsonObject identify = new JsonObject()
+            .put("id", context.request().getParam("id"))
+            .put("type", TYPE);
         dbService
-            .rxDeleteUser(INDEX, context.request().getParam("id"))
+            .rxDeleteUser(INDEX, identify)
             .subscribe(
                 () -> context.response().setStatusCode(204).end(),
                 context::fail

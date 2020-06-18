@@ -71,10 +71,15 @@ public class VetESServiceImpl implements VetESService {
     }
 
     @Override
-    public VetESService fetchUser(String index, String id, Handler<AsyncResult<JsonObject>> resultHandler) {
+    public VetESService fetchUser(String index, JsonObject identify, Handler<AsyncResult<JsonObject>> resultHandler) {
+        return this.fetchUser(index, identify.getString("type"), identify.getString("id"), resultHandler);
+    }
+
+    private VetESService fetchUser(String index, String type, String id, Handler<AsyncResult<JsonObject>> resultHandler) {
         client
             .prepareGet()
             .setIndex(index)
+            .setType(type)
             .setId(id)
             .execute(new ActionListener<GetResponse>() {
                 @Override
@@ -101,7 +106,7 @@ public class VetESServiceImpl implements VetESService {
                 resultHandler.handle(Future.failedFuture(savedIdResult.cause()));
                 return;
             }
-            this.fetchUser(index, savedIdResult.result(), savedUserResult -> {
+            this.fetchUser(index, modification.getString("type"), savedIdResult.result(), savedUserResult -> {
                 if (savedUserResult.failed()) {
                     resultHandler.handle(Future.failedFuture(savedIdResult.cause()));
                     return;
@@ -186,11 +191,16 @@ public class VetESServiceImpl implements VetESService {
     }
 
     @Override
-    public VetESService deleteUser(String index, String id, Handler<AsyncResult<Void>> resultHandler) {
+    public VetESService deleteUser(String index, JsonObject identify, Handler<AsyncResult<Void>> resultHandler) {
+        return this.deleteUser(index, identify.getString("type"), identify.getString("id"), resultHandler);
+    }
+
+    private VetESService deleteUser(String index, String type, String id, Handler<AsyncResult<Void>> resultHandler) {
         client
             .prepareDelete()
             .setIndex(index)
             .setId(id)
+            .setType(type)
             .execute(new ActionListener<DeleteResponse>() {
                 @Override
                 public void onResponse(DeleteResponse deleteResponse) {
@@ -206,9 +216,14 @@ public class VetESServiceImpl implements VetESService {
     }
 
     @Override
-    public VetESService isUserExist(String index, String id, Handler<AsyncResult<Boolean>> resultHandler) {
+    public VetESService isUserExist(String index, JsonObject identify, Handler<AsyncResult<Boolean>> resultHandler) {
+        return this.isUserExist(index, identify.getString("type"), identify.getString("id"), resultHandler);
+    }
+
+    private VetESService isUserExist(String index, String type, String id, Handler<AsyncResult<Boolean>> resultHandler) {
         client
             .prepareExists(index)
+            .setTypes(type)
             .setQuery(QueryBuilders.matchQuery("_id", id))
             .execute(new ActionListener<ExistsResponse>() {
                 @Override
