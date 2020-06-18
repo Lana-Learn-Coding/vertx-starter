@@ -50,6 +50,9 @@ public class VetQueryParser {
      * @throws RuntimeException when the rawQuery have syntax error
      */
     public static JsonObject parseQuery(String rawQuery) {
+        if (rawQuery == null) {
+            return null;
+        }
         JsonObject queryTree = new JsonObject();
         boolean isIncludeOR = matchContains(rawQuery, Operators.OR.pattern);
         boolean isIncludeAND = matchContains(rawQuery, Operators.AND.pattern);
