@@ -2,6 +2,7 @@ package com.example.vet;
 
 import com.example.vet.database.VetDatabase;
 import com.example.vet.worker.VetPasswordEncoder;
+import com.example.vet.worker.VetUserCreator;
 import io.reactivex.Completable;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Launcher;
@@ -31,7 +32,10 @@ public class VetMain extends AbstractVerticle {
     }
 
     private Completable deployWorker() {
-        DeploymentOptions options = new DeploymentOptions().setWorker(true).setInstances(2);
-        return Completable.fromSingle(vertx.rxDeployVerticle(VetPasswordEncoder.class.getName(), options));
+        DeploymentOptions options = new DeploymentOptions().setWorker(true).setInstances(1);
+        return vertx.rxDeployVerticle(VetPasswordEncoder.class.getName(), options)
+            .ignoreElement()
+            .andThen(vertx.rxDeployVerticle(VetUserCreator.class.getName(), options))
+            .ignoreElement();
     }
 }

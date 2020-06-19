@@ -56,6 +56,9 @@ dependencies {
     compileOnly "org.projectlombok:lombok:1.18.12"
     annotationProcessor "org.projectlombok:lombok:1.18.12"
 
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
+    compile "org.apache.activemq:activemq-core:5.7.0"
+
     testCompile "io.vertx:vertx-unit:${vertxVersion}"
     testCompile "com.konghq:unirest-java:3.7.03"
     testCompile "au.com.dius:pact-jvm-provider-junit:${pactVersion}"

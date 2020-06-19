@@ -1,13 +1,12 @@
 package com.example.vet;
 
+import com.example.vet.config.ActiveMQConfig;
 import com.example.vet.config.EventBusConfig;
 import com.example.vet.database.VetQueryParser;
 import com.example.vet.service.VetESService;
 import com.example.vet.validation.UserValidationHandler;
 import io.reactivex.Maybe;
-import io.reactivex.Single;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -16,32 +15,48 @@ import io.vertx.reactivex.core.http.HttpServerRequest;
 import io.vertx.reactivex.ext.web.Router;
 import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
+import org.apache.activemq.ActiveMQConnectionFactory;
+
+import javax.jms.*;
 
 public class VetHttpServer extends AbstractVerticle {
     private final String INDEX = "test";
     private final String TYPE = "user";
     private com.example.vet.service.reactivex.VetESService dbService;
+    private Session session;
+    private Connection connection;
+    private MessageProducer messageProducer;
 
     @Override
-    public void start() {
+    public void start() throws Exception {
         dbService = VetESService.createProxy(vertx.getDelegate(), EventBusConfig.VET_DB_QUEUE.address);
+        ConnectionFactory factory = new ActiveMQConnectionFactory(ActiveMQConfig.BROKER_URL.address);
+        connection = factory.createConnection();
+        session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        Destination destination = session.createQueue(ActiveMQConfig.USER_CREATION_QUEUE.address);
+        messageProducer = session.createProducer(destination);
+        connection.start();
+
         final Router router = Router.router(vertx);
         final Handler<RoutingContext> userValidation = new UserValidationHandler();
-        // Enable the body parser to we can get the form data and json documents in out context.
         router.route().handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(true));
+        router.errorHandler(500, this::onError);
 
         router.get("/users").handler(this::fetchAllUser);
         router.get("/users/:id").handler(this::fetchUser);
         router.delete("/users/:id").handler(this::deleteUser);
         router.post("/users/upload").handler(this::uploadUsers);
 
-        // User body data
         router.post("/users").handler(userValidation).handler(this::createUser);
         router.put("/users/:id").handler(userValidation).handler(this::updateUser);
 
-        router.errorHandler(500, this::onError);
-
         vertx.createHttpServer().requestHandler(router).listen(8800);
+    }
+
+    @Override
+    public void stop() throws Exception {
+        session.close();
+        connection.close();
     }
 
     private void onError(RoutingContext context) {
@@ -73,7 +88,8 @@ public class VetHttpServer extends AbstractVerticle {
         dbService
             .rxFetchUser(identify)
             .subscribe(
-                user -> this.responseOk(context, user.encode()), context::fail,
+                user -> this.responseOk(context, user.encode()),
+                context::fail,
                 () -> this.responseNotFound(context)
             );
     }
@@ -82,10 +98,12 @@ public class VetHttpServer extends AbstractVerticle {
         final JsonObject user = context.getBodyAsJson();
         // ignore the _id field
         user.remove("_id");
-        hashPasswordThenSaveUser(user).subscribe(
-            createdUser -> this.responseOk(context, createdUser.encode()),
-            context::fail
-        );
+        hashPasswordThenSaveUser(user)
+            .subscribe(
+                (saved) -> responseOk(context, saved.toString()),
+                context::fail,
+                () -> responseOk(context, "We are on it")
+            );
     }
 
     private void updateUser(RoutingContext context) {
@@ -100,7 +118,7 @@ public class VetHttpServer extends AbstractVerticle {
                 if (!userExisted) {
                     return Maybe.empty();
                 }
-                return this.hashPasswordThenSaveUser(user).toMaybe();
+                return this.hashPasswordThenSaveUser(user);
             })
             .subscribe(
                 updatedUser -> this.responseOk(context, user.encode()),
@@ -109,19 +127,17 @@ public class VetHttpServer extends AbstractVerticle {
             );
     }
 
-    private Single<JsonObject> hashPasswordThenSaveUser(JsonObject user) {
-        final String PASSWORD_FIELD = "password";
+    private Maybe<JsonObject> hashPasswordThenSaveUser(JsonObject user) {
         JsonObject modification = this.setIndexAndType(new JsonObject()).put("modification", user);
-        if (!user.containsKey(PASSWORD_FIELD)) {
-            return dbService.rxSave(modification);
+        if (!user.containsKey("password")) {
+            return dbService.rxSave(modification).toMaybe();
         }
-        DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
-        return vertx.eventBus()
-            .rxRequest(EventBusConfig.PASSWORD_ENCODER_QUEUE.address, user.getString(PASSWORD_FIELD), options)
-            .flatMap(hashed -> {
-                user.put(PASSWORD_FIELD, hashed.body());
-                return dbService.rxSave(modification);
-            });
+        // Enqueue as our hash algorithm take a lot of time
+        return Maybe.fromAction(() -> {
+            TextMessage textMessage = session.createTextMessage();
+            textMessage.setText(modification.toString());
+            messageProducer.send(textMessage);
+        });
     }
 
     private void deleteUser(RoutingContext context) {
@@ -129,10 +145,7 @@ public class VetHttpServer extends AbstractVerticle {
             .put("id", context.request().getParam("id"));
         dbService
             .rxDeleteUser(identify)
-            .subscribe(
-                () -> context.response().setStatusCode(204).end(),
-                context::fail
-            );
+            .subscribe(() -> this.responseNoContent(context), context::fail);
     }
 
     private void uploadUsers(RoutingContext context) {
@@ -166,5 +179,9 @@ public class VetHttpServer extends AbstractVerticle {
 
     private void responseNotFound(RoutingContext context) {
         context.response().setStatusCode(404).end();
+    }
+
+    private void responseNoContent(RoutingContext context) {
+        context.response().setStatusCode(204).end();
     }
 }

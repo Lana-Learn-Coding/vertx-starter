@@ -12,8 +12,13 @@ import org.slf4j.MarkerFactory;
 
 import javax.jms.*;
 
+/**
+ * Get user from queue and pass it to VetPasswordEncoder worker,
+ * then save the user with password to database
+ * <p>
+ * The encoding progress may take huge amount of time
+ */
 public class VetUserCreator extends AbstractVerticle implements MessageListener, ExceptionListener {
-
     private Session session;
     private Connection connection;
     private com.example.vet.service.reactivex.VetESService dbService;
@@ -22,13 +27,14 @@ public class VetUserCreator extends AbstractVerticle implements MessageListener,
     @Override
     public void start() throws Exception {
         dbService = com.example.vet.service.VetESService.createProxy(vertx.getDelegate(), EventBusConfig.VET_DB_QUEUE.address);
-        ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory("vm://localhost");
+        ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(ActiveMQConfig.BROKER_URL.address);
         connection = factory.createConnection();
         connection.setExceptionListener(this);
         session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
         Destination destination = session.createQueue(ActiveMQConfig.USER_CREATION_QUEUE.address);
         MessageConsumer consumer = session.createConsumer(destination);
         consumer.setMessageListener(this);
+        connection.start();
         logger.info("Connection established");
     }
 
@@ -43,14 +49,15 @@ public class VetUserCreator extends AbstractVerticle implements MessageListener,
         if (message instanceof TextMessage) {
             TextMessage textMessage = (TextMessage) message;
             try {
-                JsonObject user = new JsonObject(textMessage.getText());
+                JsonObject modification = new JsonObject(textMessage.getText());
+                JsonObject user = modification.getJsonObject("modification");
                 if (user.containsKey("password")) {
                     DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
                     vertx.eventBus()
                         .rxRequest(EventBusConfig.PASSWORD_ENCODER_QUEUE.address, user.getString("password"), options)
                         .flatMap(hashed -> {
                             user.put("password", hashed.body());
-                            return dbService.rxSave(user);
+                            return dbService.rxSave(modification);
                         })
                         .subscribe(this::onSaved, this::onFailed);
                     return;
@@ -58,9 +65,10 @@ public class VetUserCreator extends AbstractVerticle implements MessageListener,
                 String name = user.getString("name");
                 String email = user.getString("email");
                 logger.warn("User {}:{} missing password field. Shouldn't be in the queue", name, email);
-                dbService.rxSave(user).subscribe(this::onSaved, this::onFailed);
+                dbService.rxSave(modification).subscribe(this::onSaved, this::onFailed);
             } catch (JMSException e) {
                 logger.error("Cannot get text from message ", e);
+                throw new RuntimeException(e);
             }
         } else {
             logger.warn("Invalid message type: not a text: {}", message);
@@ -73,6 +81,7 @@ public class VetUserCreator extends AbstractVerticle implements MessageListener,
 
     private void onFailed(Throwable error) {
         logger.error("save failed: ", error);
+        throw new RuntimeException(error);
     }
 
     @Override
