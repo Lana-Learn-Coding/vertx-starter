@@ -97,7 +97,7 @@ public class VetHttpServer extends AbstractVerticle {
         dbService
             .rxIsUserExist(identify)
             .flatMapMaybe(userExisted -> {
-                if (userExisted) {
+                if (!userExisted) {
                     return Maybe.empty();
                 }
                 return this.hashPasswordThenSaveUser(user).toMaybe();
