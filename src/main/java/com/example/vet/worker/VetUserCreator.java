@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MarkerFactory;
 
 import javax.jms.*;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Get user from queue and pass it to VetPasswordEncoder worker,
@@ -49,24 +50,28 @@ public class VetUserCreator extends AbstractVerticle implements MessageListener,
         if (message instanceof TextMessage) {
             TextMessage textMessage = (TextMessage) message;
             try {
+                // Sync message handling
                 JsonObject modification = new JsonObject(textMessage.getText());
                 JsonObject user = modification.getJsonObject("modification");
                 if (user.containsKey("password")) {
+                    CountDownLatch countDownLatch = new CountDownLatch(1);
                     DeliveryOptions options = new DeliveryOptions().addHeader("action", "encode");
                     vertx.eventBus()
                         .rxRequest(EventBusConfig.PASSWORD_ENCODER_QUEUE.address, user.getString("password"), options)
                         .flatMap(hashed -> {
                             user.put("password", hashed.body());
+                            countDownLatch.countDown();
                             return dbService.rxSave(modification);
                         })
                         .subscribe(this::onSaved, this::onFailed);
+                    countDownLatch.await();
                     return;
                 }
                 String name = user.getString("name");
                 String email = user.getString("email");
                 logger.warn("User {}:{} missing password field. Shouldn't be in the queue", name, email);
                 dbService.rxSave(modification).subscribe(this::onSaved, this::onFailed);
-            } catch (JMSException e) {
+            } catch (JMSException | InterruptedException e) {
                 logger.error("Cannot get text from message ", e);
                 throw new RuntimeException(e);
             }
