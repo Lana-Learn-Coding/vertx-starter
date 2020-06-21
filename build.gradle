@@ -2,6 +2,7 @@ plugins {
     id "java"
     id "idea"
     id "io.vertx.vertx-plugin" version "1.1.0"
+    id "com.palantir.graal" version "0.7.1"
 }
 
 ext {
@@ -66,4 +67,10 @@ dependencies {
 
 vertx {
     mainVerticle = 'com.example.vet.VetMain'
+}
+
+graal {
+    mainClass 'com.example.vet.VetMain'
+    outputName 'vet'
+    option '--initialize-at-build-time=org.slf4j.LoggerFactory,org.slf4j.helpers.SubstituteLoggerFactory,org.slf4j.helpers.NOPLoggerFactory'
 }
