@@ -1,6 +1,7 @@
 plugins {
     id "java"
     id "idea"
+    id "io.vertx.vertx-plugin" version "1.1.0"
 }
 
 ext {
@@ -61,4 +62,8 @@ dependencies {
     testCompile "au.com.dius:pact-jvm-provider-junit:${pactVersion}"
     testCompile "au.com.dius:pact-jvm-consumer-junit:${pactVersion}"
     testCompile "junit:junit:4.12"
+}
+
+vertx {
+    mainVerticle = 'com.example.vet.VetMain'
 }
